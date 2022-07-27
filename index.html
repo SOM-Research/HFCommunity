@@ -16,9 +16,9 @@
     <body style="padding-top: 50px;">
 
         <nav class="navbar navbar-expand-lg bg-light fixed-top">
-            <div class="container-fluid">
+            <div class="container">
                 
-                <img style="float: left; padding-right: 10px; padding-top: 10px;" src="resources/HFCollection_icon_small.png"/>
+                <img style="float: left; padding-right: 10px; padding-top: 10px; width: 45px;" src="resources/HFCollection_logo.svg"/>
                 <a class="navbar-brand" href="#">HFCollection</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -36,8 +36,8 @@
                     <ul class="navbar-nav ms-auto">
                         <li>
                           <button type="button" class="btn btn-default" onClick="location.href='https://github.com/SOM-Research/HFCollection'">
-                            <img src="resources/github.svg">
-                                View on Github
+                            <img style="width: 20px;" src="resources/github.svg">
+                            View on Github
                           </button>
                         </li>
                       </ul>
@@ -48,70 +48,81 @@
         
         <div class="jumbotron">
             <div class="container">
-
-                <div class="col-md-3">
-                    <img style="float: left; padding-right: 30px;" src="resources/HFCollection_logo.svg"/>
-                </div>
-                <div class="col-md-9">
+                <div class="col-12">
+                    <img style="float: left; padding-right: 30px; height: 220px;" src="resources/HFCollection_logo.svg"/>
                     <h1>HFCollection</h1>
-                    <h2>Hugging Face Hub &rarr; Community database</h2>
+                    <h2>The Community database of Hugging Face Hub</h2>
                 </div>
 
             </div>
         </div>
         <div class="container">
             <div class="row">
-        
                 <div class="col-md-9">
                     <h3>What is HFCollection?</h3>
-                    <p>HFCollection offers an offline up-to-date information retrieval from the <a href="https://huggingface.co/">Hugging Face Hub</a> providing queriable data about the repositories hosted in the Hub. </p>
+                    <p>HFCollection offers an <strong>offline up-to-date relational database</strong> built from the data available at the <a href="https://huggingface.co/">Hugging Face Hub</a>, thus providing queriable data about the repositories hosted in the Hub. </p>
                 <!-- MAYBE EXPLAIN WHAT IS HUGGING FACE -->
                     <p>Thanks to HFCollection, developers can quickly get any kind of information about the projects hosted on Hugging Face Hub. </p>
             
                 </div><!-- /.col-md-9 -->
                 <div class="col-md-3">
                     <h3>&nbsp;</h3>
-                        <button type="button" class="btn btn-default btn-lg btn-block" onClick="location.href='download.html'">
-                              Download/Test HFCollection dataset
+                        <button type="button" class="btn btn-default btn-lg btn-block btn-download" onClick="location.href='download.html'">
+                              Download HFCollection dataset
                         </button>
                 </div> <!-- /.col-md-3 -->
             </div>
         </div>
+
         <div class="container cards">
             <div class="row">
-                <div class="col-md-4">
-                    <div class="card" style="width: 18rem;">
-                        <img src="resources/HuggingFace.png" class="card-img-top" alt="Graph structure">
+                <div class="col-4">
+                    <div class="card mx-auto" style="width: 18rem;">
+                        <img src="resources/HuggingFace.png" style="height: 150px; width: 255px;" class="card-img-top mx-auto" alt="Graph structure">
                         <div class="card-body">
                           <h5 class="card-title">Why Hugging Face?</h5>
-                          <p class="card-text">The AI open source hosting platform.</p>
-                          <a href="hf.html" class="btn btn-primary stretched-link">Know more</a>
+                          <p class="card-text">Hugging Face has become one of the most representation AI Open Source hosting platform.</p>
+                          <p class="card-text">HFCollection offers an convenient access to query Hugging Face Hub Data</p>
+                          <a href="hf.html" class="btn btn-primary stretched-link mx-auto d-block">Know more</a>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-4">
-                    <div class="card" style="width: 18rem;">
-                        <img src="resources/conceptualSchemaCropped.png" class="card-img-top" alt="Graph structure">
+                <div class="col-4">
+                    <div class="card mx-auto" style="width: 18rem;">
+                        <img src="resources/conceptualSchemaCropped.png" style="height: 150px;" class="card-img-top mx-auto" alt="Graph structure">
                         <div class="card-body">
                           <h5 class="card-title">Information Schema</h5>
-                          <p class="card-text">UML diagram of the information extracted from the Hugging Face Hub.</p>
-                          <a href="diagram.html" class="btn btn-primary stretched-link">See UML diagram</a>
+                          <p class="card-text">HFCollection provides a relational database to access Hugging Face Hub Data</p>
+                          <p class="card-text">You can check and download the UML diagram of the relational schema.</p>
+                          <a href="diagram.html" class="btn btn-primary stretched-link mx-auto d-block">See UML diagram</a>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-4">
-                    <div class="card" style="width: 18rem;">
-                        <img src="resources/metricPlaceholder.png" class="card-img-top" alt="Graph structure">
+                <div class="col-4">
+                    <div class="card mx-auto" style="width: 18rem;">
+                        <img src="resources/metricPlaceholder.png" style="height: 150px; width: 255px;" class="card-img-top mx-auto" alt="Graph structure">
                         <div class="card-body">
                           <h5 class="card-title">Metrics</h5>
-                          <p class="card-text">Some simple easy-to-understand metrics extracted from our dataset.</p>
-                          <a href="metrics.html" class="btn btn-primary stretched-link">See more</a>
+                          <p class="card-text">HFCollection enables the definition metrics via SQL queries to conduct empirical studies on the data.</p>
+                          <p class="card-text">We have defined some simple easy-to-understand metrics to illustrate the potential of HFCollection.</p>
+                          <a href="metrics.html" class="btn btn-primary stretched-link mx-auto d-block">See more</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <footer>
+        <div class="container">
+          <div class="row">
+            <div class="col-12">  
+                <p class="text-center"><small>HFCollection made with &#9829; at <a href="https://som-research.uoc.edu" target="_blank">SOM-Research Lab</a></small> </p>
+                <p class="text-center"><small>Licensed under <a href="http://creativecommons.org/licenses/by/3.0/" target="_blank">CC BY 3.0</a></small></p>
+            </div>
+          </div>
+        </div>
+        </footer>
     </body>
 </html>

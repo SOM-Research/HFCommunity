@@ -1,24 +1,76 @@
 .jumbotron {
-    padding: 2rem 1rem;
-    margin-bottom: 2rem;
-    background-color: #98c2ec;
-    border-radius: .3rem;
+  height: 235px;
+  padding-top: 40px;
+  margin-bottom: 60px;
+  background-color: #406DB4;
 }
 
+.jumbotron h1 {
+  padding-top: 45px;
+  color: white;
+}
+
+.jumbotron h2 {
+  color: white;
+}
 
 .navbar button {
   margin-top: 6px;
 }  
 
 .cards {
-  padding-top: 30px;
+  padding-top: 60px;
 }
 
 .cards .col-md-4 .card .card-body .card-title {
   font-weight: bold;
 }
 
+.card-img-top {
+  padding: 15px;
+}
+
 .big-title {
   position: absolute;
   bottom: 0;
+}
+
+.card .btn {
+  background-color: #406DB4;
+  border: none;
+}
+
+.card .btn:hover {
+  background-color: #648AC7;
+  border: none;
+}
+
+.btn-download {
+  background-color: #406DB4;
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
+}
+
+.btn-download:hover {
+  background-color: #648AC7;
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
+}
+
+footer {
+	margin-top: 60px;
+	padding-top: 10px;
+	padding-bottom: 150px;
+	background-color:  #406DB4;
+  color: white;
+}
+
+footer p {
+	margin-bottom: 0px;
+}
+
+footer a, a:hover{
+  color: white;
 }
