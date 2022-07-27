@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>HFCollection</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="HFCollection recovers valuable information of the Hugging Face repositories alongside its Git commit history.">
+        
+        <!-- CSS only -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+        <!-- JavaScript Bundle with Popper -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa" crossorigin="anonymous"></script>
+
+        <link href="css/style.css" rel="stylesheet" media="screen">
+        <link href='http://fonts.googleapis.com/css?family=Roboto:700' rel='stylesheet' type='text/css'>
+    </head>
+    <body style="padding-top: 70px;">
+
+        <nav class="navbar navbar-expand-lg bg-light fixed-top">
+            <div class="container-fluid">
+                
+                <img style="float: left; padding-right: 10px; padding-top: 10px;" src="resources/HFCollection_icon_small.png"/>
+                <a class="navbar-brand" href="index.html">HFCollection</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+                        </li>
+                        <li class="nav-item">
+                        <a class="nav-link" href="#">Menu</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto">
+                        <li>
+                          <button type="button" class="btn btn-default" onClick="location.href='https://github.com/SOM-Research/HFCollection'">
+                            <img src="resources/github.svg">
+                                View on Github
+                          </button>
+                        </li>
+                      </ul>
+                </div>
+
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row d-flex justify-content-center align-items-baseline">
+                
+                <div class="col-md-6">
+                    <h3>Why Hugging Face?</h3>
+                </div>
+                <div class="col-md-3">
+                    <img src="resources/HuggingFace.png" class="w-100">
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-md-9">
+                    <p class="p-2">
+                        Hugging Face is an AI company which develops social AI-run chatbot applications. For this, Hugging Face developed its own natural language processing (NLP) model called Hierarchical Multi-Task Learning (HMTL). Furthermore, can be more recognized for the <a href="https://huggingface.co/docs/transformers/index">Transformers</a> which is a library of state-of-the-art pre-trained models for PyTorch, TensorFlow and JAX.
+                    </p>
+
+                    <p class="p-2">
+                        Moreover, it offers a Git-based hosting platform to store <a href="https://huggingface.co/docs/hub/models">Models</a>, <a href="https://huggingface.co/docs/hub/datasets">Datasets</a> and <a href="https://huggingface.co/docs/hub/spaces">Spaces</a>, called the Hugging Face Hub.
+                    </p>
+
+                    <h5>Hugging Face Hub</h5>
+                    <p class="p-2">
+                        This platform has the potential (or it already has) to build an active, healthy and strong open source community around the AI field. The dynamic this platform follows is similar to other code hosting platforms such as GitHub. However, Hugging Face Hub repositories can interact. That is, a model uploaded by any user can use a dataset uploaded by any other user. Moreover, there are repositories that host demo apps of models so that users can understand how the model works. These repositories are called Spaces.
+                    </p>
+                    
+                    
+                    <h5>Repository Example</h5>
+                </div><!-- /.col-md-9 -->
+                
+            </div><!-- ./row-->
+            <div class="row d-flex justify-content-center">
+
+                <div class="col-md-3">
+                    <p class="p-2">
+                        As aforementioned, repositories are Git-based and some users may find a similar interface with other code hosting platforms. 
+                        
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <img src="resources/model_example.png" class="rounded float-end w-100" alt="repository front face">
+                </div>
+            </div>
+        </div>
+        
+    </body>
+</html>
