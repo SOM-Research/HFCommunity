@@ -71,10 +71,14 @@ footer p {
 	margin-bottom: 0px;
 }
 
-a a:hover {
-  color: #406DB4
+body a:hover {
+  color: #648AC7;
 }
 
-footer a, a:hover{
+footer a{
   color: #ffffff;
+}
+
+footer a:hover {
+  color: #ffffff
 }
