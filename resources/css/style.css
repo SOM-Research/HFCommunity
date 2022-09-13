@@ -71,6 +71,10 @@ footer p {
 	margin-bottom: 0px;
 }
 
+a a:hover {
+  color: #406DB4
+}
+
 footer a, a:hover{
   color: #ffffff;
 }
