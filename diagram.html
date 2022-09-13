@@ -48,18 +48,6 @@
                             <li>Hugging Face offers a Python library to exploit the Hub called <a href="https://huggingface.co/docs/huggingface_hub/index">Hub client library</a> which allows the interaction with the Hugging Face Hub, such as delete or clone a repository, upload files, and create and update a branch. Furthermore, it supports the retrieval of information from these repositories.</li>
                             <li>However, there is some information valuable in a repository that is not tracked by this library: development history. The information of the track of commits can be useful to understand the evolution and development practices of a project. Thus, we have recovered this information using a Git analyzer tool: <a href="https://pydriller.readthedocs.io/en/latest/">PyDriller</a>. As a result, besides the information available in the Hub client library,  we offer the data of the commits of each repository which includes the date and time of the commit, its author, and the changed files, among others.</li>
                         </ol>
-                    
-                    <h5>Limitations</h5>
-
-                    <p class="p-2">We detected some limitations on our proposal:
-                        <ul>
-                            <li>The <b>Hub client library is currently under development</b>, thus having some limitations on the data retrieval. For example, the complete information about an author is only retrievable for the authors of discussions, as we recover it directly from the API endpoint.</li>
-                            <li>There is not a way to <b>link commit authors with users</b> of the Hugging Face Hub.</li>
-                            <li>The <b>connection between types of repositories</b> (model, dataset and space) <b>is not tracked</b>, neither in the Hub client library nor the Hub API. The connection mentioned refers to the association of a dataset being used by a model, for example.</li>
-                            <li>We do not have <b>information about the comments in the discussions</b>. However, it is being developed by the Hugging Face team.</li>
-                        </ul>
-                        
-                    </p>
 
                     <h5>UML diagram</h5>
                     <p class="p-2"></p>
@@ -68,6 +56,21 @@
                 <div class="text-center">
                     <img src="resources/figs/conceptualSchema.svg">
                 </div>
+                
+                <div class="col-md-9">
+                    <h3>&nbsp;</h3>
+                    <h5>Limitations</h5>
+
+                        <p class="p-2">We detected some limitations on our proposal:
+                            <ul>
+                                <li>The <b>Hub client library is currently under development</b>, thus having some limitations on the data retrieval. For example, the complete information about an author is only retrievable for the authors of discussions, as we recover it directly from the API endpoint.</li>
+                                <li>There is not a way to <b>link commit authors with users</b> of the Hugging Face Hub.</li>
+                                <li>The <b>connection between types of repositories</b> (model, dataset and space) <b>is not tracked</b>, neither in the Hub client library nor the Hub API. The connection mentioned refers to the association of a dataset being used by a model, for example.</li>
+                                <li>We do not have <b>information about the comments in the discussions</b>. However, it is being developed by the Hugging Face team.</li>
+                            </ul>
+                            
+                        </p>
+                    </div>
                 
             </div>
         </div>
