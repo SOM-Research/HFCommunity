@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>HFCollection</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="HFCollection recovers valuable information of the Hugging Face repositories alongside its Git commit history.">
+        
+        <!-- CSS only -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+        <!-- JavaScript Bundle with Popper -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa" crossorigin="anonymous"></script>
+
+        <link href="resources/css/style.css" rel="stylesheet" media="screen">
+        <link href='http://fonts.googleapis.com/css?family=Roboto:700' rel='stylesheet' type='text/css'>
+    </head>
+    <body style="padding-top: 70px;">
+    
+        <nav class="navbar navbar-expand-lg bg-light fixed-top">
+            <div class="container">
+                
+                <img style="float: left; padding-right: 10px; padding-top: 10px; width: 45px;" src="resources/figs/HFCollection_logo.svg"/>
+                <a class="navbar-brand" href="index.html">HFCollection</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li>
+                          <button type="button" class="btn btn-default" onClick=" window.open('https://github.com/SOM-Research/HFCollection','_blank')">
+                            <img style="width: 20px;" src="resources/figs/github.svg">
+                            View on Github
+                          </button>
+                        </li>
+                      </ul>
+                </div>
+
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row d-flex justify-content-center">
+        
+                <div class="col-9">
+                    <h3>Database</h3>
+                    <p>
+                        Our database is composed by 10 tables (see <a href="diagram.html">UML diagram</a> to visualize the main components).
+                        One required fact when working with datasets is how large are the tables? 
+                        In the following table is shown how many records has each database table.
+                        (All data in this page is from 01/09/2022).
+                    </p>
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-4">
+                    <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th scope="col" class="text-center">table name</th>
+                            <th scope="col" class="text-center">number of records</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                              <tr>
+                                <td>author</td>
+                                <td class="text-end">38,424</td>
+                              </tr>
+                              <tr>
+                                <td>commits</td>
+                                <td class="text-end">684,720</td>
+                              </tr>
+                              <tr>
+                                <td>dataset</td>
+                                <td class="text-end">8,043</td>
+                              </tr>
+                              <tr>
+                                <td>discussion</td>
+                                <td class="text-end">4,141</td>
+                              </tr>
+                              <tr>
+                                <td>file</td>
+                                <td class="text-end">2,913,386</td>
+                              </tr>
+                              <tr>
+                                <td>files_in_commit</td>
+                                <td class="text-end">989,334</td>
+                              </tr>
+                              <tr>
+                                <td>model</td>
+                                <td class="text-end">68,667</td>
+                              </tr>
+                              <tr>
+                                <td>space</td>
+                                <td class="text-end">8,046</td>
+                              </tr>
+                              <tr>
+                                <td>tag</td>
+                                <td class="text-end">13,261</td>
+                              </tr>
+                              <tr>
+                                <td>tags_in_repo</td>
+                                <td class="text-end">337,199</td>
+                              </tr>
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+
+            <div class="row d-flex justify-content-center">
+                <div class="col-9">
+                    <h3>Download</h3>
+                    <p>
+                        Our database is built using a <a href='https://mariadb.org/'>MariaDB</a> server. To replicate our database we offer the dump file of all the database or the CSV files of each table.
+                    </p>
+                </div>
+            </div>
+            <div class="row d-flex justify-content-around">
+                <div class="col-2"></div>
+                <div class="col-3">
+                    <button type="button" class="btn btn-default btn-lg btn-block btn-download" onClick="location.href='resources/database/dump.zip'">
+                        HFCollection dump file 
+                    </button>
+                </div>
+                <div class="col-3">
+                    <button type="button" class="btn btn-default btn-lg btn-block btn-download" onClick="location.href='resources/database/csv_data.zip'">
+                        HFCollection CSV files 
+                  </button>
+                </div>
+                <div class="col-2"></div>
+            </div>
+        </div>
+        
+        <footer>
+            <div class="container">
+              <div class="row">
+                <div class="col-12">  
+                    <p class="text-center"><small>HFCollection made with &#9829; at <a href="https://som-research.uoc.edu" target="_blank">SOM-Research Lab</a></small> </p>
+                    <p class="text-center"><small>Licensed under <a href="http://creativecommons.org/licenses/by/3.0/" target="_blank">CC BY 3.0</a></small></p>
+                </div>
+              </div>
+            </div>
+            </footer>
+    </body>
+</html>
