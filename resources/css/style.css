@@ -75,10 +75,22 @@ body a:hover {
   color: #648AC7;
 }
 
-footer a{
+footer a {
   color: #ffffff;
 }
 
 footer a:hover {
   color: #ffffff
 }
+
+figcaption {
+  font-weight: bolder;
+}
+
+.screenshot {
+  border: 1px solid black;
+  margin-top: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
