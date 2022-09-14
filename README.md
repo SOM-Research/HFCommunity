@@ -16,16 +16,15 @@ At SOM Research Lab we are dedicated to creating and maintaining welcoming, incl
 
 The development and community managemente of this project follows the governance rules described in the [GOVERNANCE.md](GOVERNANCE.md) document.
 
-# Who is being this repository
+# Who is behind this repository
 
 We are currently a group of three researchers from the [SOM Research Lab](https://som-research.github.io/):
 
-* [Adem Ait](https://github.com/ademait/) (he/him)
-* [Javier Cánovas](https://github.com/jlcanovas/) (he/him)
-* [Jordi Cabot](https://github.com/jcabot/) (he/him)
+* [Adem Ait](https://github.com/ademait/) 
+* [Javier Cánovas](https://github.com/jlcanovas/) 
+* [Jordi Cabot](https://github.com/jcabot/) 
 
 # License
-
 
 This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>
 
