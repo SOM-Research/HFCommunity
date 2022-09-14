@@ -6,13 +6,9 @@ There are several ways in which you can contribute, beyond writing code. The goa
 
 ## Asking Questions 
 
-Do you have a question? Feel free to [open an issue](https://github.com/SOM-Research/HFCollection/issues/) and tag the issue with `question`.
+Do you have a question? Feel free to [open an issue](https://github.com/SOM-Research/HFCollection/issues/new?assignees=&labels=question&template=question.md).
 
 Project maintainers will be eager to listen from you and help you out. Please, try to compose a clear and concise question. The more information you provide, the better we will be able to help you.
-
-## Providing Feedback
-
-Your comments and feedback are welcome, and they are important to us. Please, [open an issue](https://github.com/SOM-Research/HFCollection/issues/) and report your feedback. 
 
 ## Reporting Issues
 
@@ -24,7 +20,7 @@ Sometimes the issue you want to report is being already addressed, or is planned
 
 If you find your issue already exists, do not hesittate to make relevant comments and add your [reaction](https://github.com/blog/2119-add-reactions-to-pull-requests-issues-and-comments). Please, use a reaction in place of a "+1" comment, we believe it's easy: 👍 for upvoting and 👎 for downvoting.
 
-If you cannot find an existing issue that describes your bug or feature, create a new issue using the guidelines below.
+If you cannot find an existing issue that describes your bug or feature, [create a new issue](https://github.com/SOM-Research/HFCollection/issues/new?assignees=&labels=&template=proposal.md). The template will guide you on the issue reporting.
 
 ### Writing Good Bug Reports and Feature Requests
 
@@ -35,6 +31,10 @@ As you can imagine, the more information you can provide, the more likely someon
 ### Creating Pull Requests
 
 Please refer to the article on [creating pull requests](https://github.com/microsoft/vscode/wiki/How-to-Contribute#pull-requests) before contributing to this project.
+
+### Governance
+
+Any contribution you send to us will be addressed by the project maintainers following the governance rules described in the [GOVERNANCE.md](GOVERNANCE.md)
 
 # Thank You!
 
