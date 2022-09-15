@@ -57,7 +57,7 @@
 
         <div class="container">
             
-            <div class="row d-flex justify-content-center">
+            <div class="row d-flex justify-content-center mb-5">
         
                 <div class="col-9">
                     <h3>Metrics from our dataset</h3>
@@ -70,88 +70,134 @@
                 
                 <div class="col-5">
                     <h5>Which organization creates the most models?</h5>
-                    <br> <!--Chapuza?-->
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
+                    <h5>How many files does a repository have?</h5>
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5">
                     <p>
                         It is interesting to know which organization is creating/uploading the more models in Hugging Face. In the following chart we can see that the organization that creates the most models is huggingtweets, but there are other known names too, such as Google or Facebook.
                     </p>
-                    <div id="bar_chart"></div>
-                    <br>
                 </div>
 
                 <div class="col-1"></div>
 
                 <div class="col-5">
-                    <h5>How many files does a repository have?</h5>
-                    <br> <!--Chapuza?-->
                     <p>
                         Here we show the number of files a repository has. For example, the first case tells that 14.8% of all repositories in the Hugging Face Hub have only 1 file.
                     </p>
-                    <div id="donut_chart"></div>
-
-                    <br>
+                    
                 </div>
                 
             </div>
+            <div class="row d-flex justify-content-center mb-5 mt-3">
+                <div class="col-5">
+                    <div id="bar_chart"></div>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
+                    <div id="donut_chart"></div>
+                </div>
+            </div>
+
             <div class="row d-flex justify-content-center">
                 
                 <div class="col-5">
                     <h5>How often a file is modified in a repository?</h5>
-                    <br> <!--Repo: harr/distilbert-base-uncased-finetuned-ingredients-->
-                    <p>
-                        When analyzing repositories in code hosting platforms, one thing usually overlooked is which files are more often modified. This could give us a hint of how is worked in the repository or how it is organised. The following table represents a heatmap of file modifications in repository model: <a href="https://huggingface.co/harr/distilbert-base-uncased-finetuned-ingredients" target="_blank">distilbert-base-uncased-finetuned-ingredients</a>.
-                    </p>
-                    <div class="text-center">
-                        <img src="resources/figs/heatmap.png" class="w-50" alt="example metric 3">
-                    </div>
-                    <br>
                 </div>
-
                 <div class="col-1"></div>
-
                 <div class="col-5">
                     <h5>Does it have an associated <i>paperwithcode</i>?</h5>
-                    <br> <!--Chapuza?-->
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5">
+                    <p> <!--Repo: harr/distilbert-base-uncased-finetuned-ingredients-->
+                        When analyzing repositories in code hosting platforms, one thing usually overlooked is which files are more often modified. This could give us a hint of how is worked in the repository or how it is organised. The following table represents a heatmap of file modifications in repository model: <a href="https://huggingface.co/harr/distilbert-base-uncased-finetuned-ingredients" target="_blank">distilbert-base-uncased-finetuned-ingredients</a>.
+                    </p>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
                     <p>
                         Some dataset repositories have an associated <a href="https://paperswithcode.com/"><i>paperwithcode</i></a> element. This platform is used to upload the code of a paper so it is easier to replicate the work.
                     </p>
-                    <div id="pie_chart"></div>
                 </div>
-
-                
+            </div>
+            <div class="row d-flex justify-content-center mb-5 mt-3">
+                <div class="col-5">
+                    <div class="text-center">
+                        <img src="resources/figs/heatmap.png" class="w-50" alt="example metric 3">
+                    </div>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
+                    <div id="pie_chart"></div>
+                </div>                
             </div>
             <div class="row d-flex justify-content-center">
-                
                 <div class="col-5">
                     <h5>How many repositories have discussions?</h5>
-                    <br> 
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
+                    <h5>The use of discussions in the Hub</h5>
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5">
                     <p>
                         One key aspect of the Hugging Face Hub, and recently added, are the <a href="https://huggingface.co/docs/hub/repositories-pull-requests-discussions">pull requests and discussions</a>. This feature enables the collaboration among all community members. But as we see in the following chart, very few repositories leverage of this functionality.
                     </p>
-                    <div id="gauge"></div>
-                    <br>
                 </div>
-
                 <div class="col-1"></div>
-
                 <div class="col-5">
-                    <h5>The use of discussions in the Hub</h5>
-                    <br> 
                     <p>
                         As we have seen, few projects draw on discussions. Besides using discussions or not, another interesting metric is how much are these discussions exploited. Here we show the number of repositories grouped by the number of discussions and comments. As we can see most repositories only have one thread of discussions.
                     </p>
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center mb-5 mt-3">
+                <div class="col-5">
+                    <div id="gauge"></div>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
                     <div id="donut_chart_discussions"></div>
                 </div>
-                <div class="row d-flex justify-content-center">
-                
-                    <div class="col-5">
-                        <h5>How many comments have discussions in the Hub?</h5>
-                        <br> 
-                        <p>
-                            We have seen that most repositories have just one discussion, but another element to consider are the comments in the threads of discussions. Hence, we show how many comments by average have the discussions in each repository.
-                        </p>
-                        <div id="bar_chart_comments"></div>
-                        <br>
-                    </div>
+            </div>
+
+            <div class="row d-flex justify-content-center">    
+                <div class="col-5">
+                    <h5>How many comments have discussions in the Hub?</h5>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
+                    <h5>How many discussion threads are not created by the owner?</h5>
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5">
+                    <p>
+                        We have seen that most repositories have just one discussion, but another element to consider are the comments in the threads of discussions. Hence, we show how many comments by average have the discussions in each repository.
+                    </p>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
+                    <p>
+                        Another relevant detail about discussions is who create them. Here we are trying to detect whether the discussions are started by the owner of the repository or not. As we can see, the vast majority of discussions are not created by the owner. The chart is visualized using a logarithmic scale.
+                    </p>
+                </div>
+            </div>
+            <div class="row d-flex justify-content-center mb-5 mt-3">
+                <div class="col-5">
+                    <div id="bar_chart_comments"></div>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-5">
+                    <div id="bar_chart_disc_auth"></div>
                 </div>
             </div>
 
@@ -306,6 +352,38 @@
                 },
             }
         }
+    });
+
+    var chart_8 = c3.generate({
+        bindto: '#bar_chart_disc_auth',
+        data: {
+            columns: [
+                ['num_discussions', 0.48, 1, 0.78, 3.41],
+            ],
+            type : 'bar',
+            labels : {
+                    show:true,
+                    format: {
+                        num_discussions : function(d,id){console.log(id, Math.pow(10,d));return Math.pow(10,d).toFixed(0);}
+                    }
+            },
+
+            onclick: function (d, i) { console.log("onclick", d, i); },
+            onmouseover: function (d, i) { console.log("onmouseover", d, i); },
+            onmouseout: function (d, i) { console.log("onmouseout", d, i); }
+        },
+        axis: {
+            x: {
+                type: 'category',
+                categories: ['[0,25]', '(25,50]', '(50,100)', '100'],
+                tick: {
+                    rotate: 75,
+                    multiline: false
+                },
+            }
+        },
+        
+        
     });
 
 
