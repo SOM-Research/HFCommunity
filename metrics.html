@@ -114,8 +114,45 @@
                     </p>
                     <div id="pie_chart"></div>
                 </div>
+
                 
             </div>
+            <div class="row d-flex justify-content-center">
+                
+                <div class="col-5">
+                    <h5>How many repositories have discussions?</h5>
+                    <br> 
+                    <p>
+                        One key aspect of the Hugging Face Hub, and recently added, are the <a href="https://huggingface.co/docs/hub/repositories-pull-requests-discussions">pull requests and discussions</a>. This feature enables the collaboration among all community members. But as we see in the following chart, very few repositories leverage of this functionality.
+                    </p>
+                    <div id="gauge"></div>
+                    <br>
+                </div>
+
+                <div class="col-1"></div>
+
+                <div class="col-5">
+                    <h5>The use of discussions in the Hub</h5>
+                    <br> 
+                    <p>
+                        As we have seen, few projects draw on discussions. Besides using discussions or not, another interesting metric is how much are these discussions exploited. Here we show the number of repositories grouped by the number of discussions and comments. As we can see most repositories only have one thread of discussions.
+                    </p>
+                    <div id="donut_chart_discussions"></div>
+                </div>
+                <div class="row d-flex justify-content-center">
+                
+                    <div class="col-5">
+                        <h5>How many comments have discussions in the Hub?</h5>
+                        <br> 
+                        <p>
+                            We have seen that most repositories have just one discussion, but another element to consider are the comments in the threads of discussions. Hence, we show how many comments by average have the discussions in each repository.
+                        </p>
+                        <div id="bar_chart_comments"></div>
+                        <br>
+                    </div>
+                </div>
+            </div>
+
         </div>
         
         <footer>
@@ -203,6 +240,72 @@
             onmouseout: function (d, i) { console.log("onmouseout", d, i); }
         },
     });
+
+    var chart_5 = c3.generate({
+        bindto: '#gauge',
+        data: {
+            columns: [
+                ['model', (1632/61508*100).toFixed(4)],
+                ['dataset', (704/7887*100).toFixed(4)],
+                ['space', (465/7691*100).toFixed(4)],
+            ],
+            type: 'gauge',
+            onclick: function (d, i) { console.log("onclick", d, i); },
+            onmouseover: function (d, i) { console.log("onmouseover", d, i); },
+            onmouseout: function (d, i) { console.log("onmouseout", d, i); }
+        },
+        size: {
+            height: 250
+        }
+    });
+
+    var chart_6 = c3.generate({
+        bindto: '#donut_chart_discussions',
+        data: {
+            columns: [
+                ['1'   , 2284],
+                ['2-5' ,  460],
+                ['6-10',   42],
+                ['>10' ,   15],
+            ],
+            type : 'donut',
+
+            onclick: function (d, i) { console.log("onclick", d, i); },
+            onmouseover: function (d, i) { console.log("onmouseover", d, i); },
+            onmouseout: function (d, i) { console.log("onmouseout", d, i); }
+        },
+        donut: {
+            title: "Repos per num of discussions"
+        },
+        size: {
+            height: 350,
+        }
+    });
+
+    var chart_7 = c3.generate({
+        bindto: '#bar_chart_comments',
+        data: {
+            columns: [
+                ['num_comments', 1955, 98, 26, 359, 321, 42],
+            ],
+            type : 'bar',
+
+            onclick: function (d, i) { console.log("onclick", d, i); },
+            onmouseover: function (d, i) { console.log("onmouseover", d, i); },
+            onmouseout: function (d, i) { console.log("onmouseout", d, i); }
+        },
+        axis: {
+            x: {
+                type: 'category',
+                categories: ['1', '(1,1.5]', '(1.5,2)', '2', '(2,5]', '(5,12]'],
+                tick: {
+                    rotate: 75,
+                    multiline: false
+                },
+            }
+        }
+    });
+
 
     </script>
     
