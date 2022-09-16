@@ -114,6 +114,18 @@
                         </tbody>
                       </table>
                 </div>
+                <div class="row d-flex justify-content-center mt-3">
+                  <div class="col-9">
+                    <h5>ER Diagram</h5>
+                    <p>
+                      From the <a href="diagram.html">UML diagram</a>, introduced in the information schema page, we have built our database, presented below in the crow's foot notation. Note that we use UML-like inheritance notation for Repository for the sake of simplicity. In the database, this inheritance has been mapped using the concrete table inheritance method, resulting in three tables, one per each type of repository.
+                    </p>
+                  </div>
+                  <div class="text-center mb-5">
+                      <img src="resources/figs/databaseDiagram.svg  ">
+                  </div>
+                  </div>
+                </div>
             </div>
 
             <div class="row d-flex justify-content-center">
@@ -124,7 +136,7 @@
                     </p>
                 </div>
             </div>
-            <div class="row d-flex justify-content-around">
+            <div class="row d-flex justify-content-around mt-3 mb-5">
                 <div class="col-2"></div>
                 <div class="col-3">
                     <button type="button" class="btn btn-default btn-lg btn-block btn-download" onClick="location.href='resources/database/dump.zip'">
