@@ -52,6 +52,13 @@
   box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
 }
 
+.btn-download:active {
+  background-color: #406DB4;
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
+}
+
 .btn-download:hover {
   background-color: #648AC7;
   color: white;
