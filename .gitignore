@@ -1,2 +1,7 @@
 metrics/
 dumps/old/old_dump.zip
+dumps/old/csv_data.zip
+dumps/old/dump.zip
+deleted rows/files_repo_id.txt
+deleted rows/files_id.txt
+deleted rows/commits_sha.txt
