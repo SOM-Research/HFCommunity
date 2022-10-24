@@ -1,4 +1,4 @@
-# Contributing to VS Code
+# Contributing to HFCommunity
 
 First of all, thank you for your interest in contributing to our project!
 
