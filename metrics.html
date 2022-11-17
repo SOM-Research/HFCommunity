@@ -103,6 +103,8 @@
                 <div class="col-1"></div>
                 <div class="col-5">
                     <div id="donut_chart"></div>
+                    
+                    <input type="button" onclick="printDiv('donut_chart')" value="print a div!"/>
                 </div>
             </div>
 
@@ -380,6 +382,22 @@
         
         
     });
+
+    function printDiv(divName) {
+        // fix weird back fill
+        d3.select('#'+divName).selectAll("path").attr("fill", "none");
+        //fix no axes
+        d3.select('#'+divName).selectAll("path.domain").attr("stroke", "black");
+        //fix no tick
+        d3.select('#'+divName).selectAll(".tick line").attr("stroke", "black");
+        // fix text going off the export (becuase my labels font size is larger than default)
+        d3.select('#'+divName+"> svg").style("font-size","12px");
+        // add any other styles needed
+        var printContents = document.getElementById(divName).innerHTML;
+        document.body.innerHTML = printContents;
+        window.print();
+        window.location.reload();   
+    }
 
 
     </script>
