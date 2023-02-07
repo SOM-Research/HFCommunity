@@ -1,6 +1,6 @@
 # HFCommunity
 
-HFCommunity offers an offline up-to-date relational database built from the data available at the Hugging Face Hub, providing queryable data about the repositories hosted in the Hub
+[HFCommunity](https://som-research.github.io/HFCommunity/) offers an offline up-to-date relational database built from the data available at the Hugging Face Hub, providing queryable data about the repositories hosted in the Hub
 
 # Contributing
 
