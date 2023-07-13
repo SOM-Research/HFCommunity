@@ -112,3 +112,9 @@ figcaption {
   height: 20px;
 }
 
+.anchor{
+  display:block;
+  height:63px; /* this is the height of your header */
+  margin-top:-63px; /* this is again negative value of the height of your header */
+  visibility:hidden;
+}

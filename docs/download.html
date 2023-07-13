@@ -125,7 +125,12 @@
                 </div>
                 <div class="row d-flex justify-content-center mt-3">
                   <div class="col-9">
-                    <h5>ER Diagram</h5>
+                    <span class="anchor" id="er_diagram"></span>
+                    <h5>
+                      <a href="#er_diagram" style="text-decoration: none; color: black">
+                        ER Diagram
+                      </a>
+                    </h5>
                     <p>
                       From the <a href="diagram.html">UML diagram</a>, we have defined the corresponding database schema, presented below in the crow's foot notation. Note that we use UML-like inheritance notation for Repository for the sake of simplicity. In the database, this inheritance has been mapped using the concrete table inheritance method, resulting into three tables, one per each type of repository. Attribute and table names are mapped from the attribute names presented in the <a href="https://huggingface.co/docs/huggingface_hub/index">Hugging Face Hub library</a>.
                     </p>
@@ -138,7 +143,10 @@
 
             <div class="row d-flex justify-content-center">
                 <div class="col-9">
-                    <h3>Download</h3>
+                  <span class="anchor" id="download"></span>
+                    <h3>
+                      <a href="#download" style="text-decoration: none; color: black">Download</a>
+                    </h3>
                     <p>
                        We deployed our database in a <a target="_blank" href='https://mariadb.org/'>MariaDB</a> server. We offer the database as a compressed dump file.
                     </p>
