@@ -15,18 +15,24 @@ import huggingface_hub.utils._errors as hf_errors
 import mysql.connector
 import json
 from random import sample
-from time import sleep
 from huggingface_hub import HfApi
 import itertools
 from cleantext import clean
+from datetime import datetime
+from dateutil.parser import parse
+import dateutil.relativedelta
+import pytz
 
 
 ACCESS_TOKEN = ''
+SKIPPED_REPOS = 0
 
 # ERROR PRINTING
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+
+# DB CONFIGURATION
 def create_connection_mysql():
       """ 
       Create a database connection to a MySQL/MariaDB database.
@@ -128,21 +134,8 @@ def create_schema_mysql(cursor):
       print("Tables created!")
 
 
-# UTILITY FUNCTIONS
-def check_attribute(dict, attr):
-      """ function to check whether an attribute is in a dictionary """
-
-      attribute = ""
-      try:
-            attribute = dict.__getattribute(attr)
-      except:
-            attribute = None
-
-      return attribute
-
-
 # POPULATE FUNCTIONS
-def populate_tags(cursor, tags, repo_name, type):
+def populate_tags(cursor, conn, tags, repo_name, type):
       """ importation of tag information """
   
       for tag in tags:
@@ -150,6 +143,7 @@ def populate_tags(cursor, tags, repo_name, type):
             cursor.execute('''
             INSERT IGNORE INTO tag (name) VALUES (%s)
             ''', [tag])
+            conn.commit() # Commit changes to DB to fulfill FK restriction
             cursor.execute('''
             INSERT IGNORE INTO tags_in_repo (tag_name, repo_id) VALUES (%s, %s)
             ''', (tag, type + '/' + repo_name))
@@ -170,45 +164,153 @@ def populate_files(cursor, files, repo_name, type):
 
 
 def populate_dataset_files(cursor, dataset_id, api):
+      """ Importation of dataset file information """
+
+      # Sometimes list_repo_files does not retreive info at first. We try 5 times.
       n = 0
       while n < 5:
             try:
                   populate_files(cursor, api.list_repo_files(repo_id=dataset_id, repo_type="dataset", use_auth_token=ACCESS_TOKEN), dataset_id, "datasets")
                   n = 5
-            except hf_errors.RepositoryNotFoundError as e:
+            except:
                   eprint("---------DATASET FILES ERROR---------")
-                  eprint("ERROR: Repository Not Found (Repo: (dataset) " + dataset_id + "). Printing exception...")
-                  eprint(e)
+                  eprint("ERROR: Unknown (Repo: (dataset) " + dataset_id + "). Printing exception...")
                   n = 5
-            except requests.exception.HTTPError as e:
-                  eprint("---------DATASET FILES ERROR---------")
-                  eprint("ERROR: HTTPError on repo (dataset): " + dataset_id + ". Exception:\n" + e)
-                  eprint("Retrying...")
-                  sleep(10)
-                  n = n + 1
 
 
-def populate_discussions(cursor, api, repo_name, type):
+def populate_commits(cursor, conn, repo_id, type):
+      """ importation of commit information using PyDriller """
+
+      # As we have to do some SELECTs to the database, we commit all the INSERTs until now
+      conn.commit()
+
+      url_prefix = ""
+      if type != "models":
+            url_prefix = type + '/'
+      
+
+      url = 'https://user:password@huggingface.co/' + url_prefix + repo_id
+
+      repo_path = "../" + type + "_bare_clone" # WARNING: With this workaround we can just have one process per repo type
+
+      try:
+            subprocess.check_output(["git",  "clone",  "--bare",  url, repo_path])
+      except subprocess.CalledProcessError:
+            eprint("HF Repository clone error (repo: " + repo_id + "): authentication error.\n")
+            return
+
+      # Some repos are like 'author/reponame' and others just 'reponame'
+      if '/' in repo_id:
+            # We get just 'reponame'
+            repo_folder = repo_id.split('/')[1] + '.git'
+      else:
+            repo_folder = repo_id + '.git'
+
+      path = os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + '/' + type + "_bare_clone"
+
+      repo = Repository(path)
+      
+      num_commits = int(subprocess.check_output(["git",  "rev-list",  "--count", "HEAD"], cwd=path))
+      
+
+      # We will skip repos with more than 2k commits or 30k files
+      if type == 'datasets' or type == 'model':
+            cursor.execute("SELECT COUNT(filename) FROM file WHERE repo_id=%s", [type + '/' + repo_id])
+            num_files = cursor.fetchone()
+            if num_commits>2000 or num_files[0] > 30000:
+                  print("Repo: ", repo_id, " skipped with num_commits: ", num_commits, " and num_files: ", num_files[0])
+                  os.system("rm -rf " + repo_path)
+                  global SKIPPED_REPOS
+                  SKIPPED_REPOS = SKIPPED_REPOS + 1
+                  return
+
+      # Start with the commit importation
+      try:
+            cursor.execute("SELECT filename, id FROM file WHERE repo_id=%s", [type + '/' + repo_id])
+            repo_files = dict(cursor.fetchall())
+
+            for commit in repo.traverse_commits():
+                  
+                  cursor.execute('''
+                  INSERT IGNORE INTO author (username, source) VALUES (%s, %s)
+                  ''', (commit.author.name, "commit"))
+                  # Commit author
+                  conn.commit()
+                  cursor.execute('''
+                  INSERT IGNORE INTO commits (sha, timestamp, message, author) VALUES (%s, %s, %s, %s)
+                  ''', (commit.hash, commit.author_date, commit.msg, commit.author.name))
+                  
+                  # Commit the commit
+                  conn.commit()
+
+                  try:
+                        # Check whether the files in the commit exist in the repo 
+                        # (the file could be deleted, or renamed, so we think we should only track current files)
+                        commit_files      = [file.new_path for file in commit.modified_files]
+                        commit_files_dict = {key:repo_files[key] for key in commit_files if key in repo_files.keys()}
+
+                        for key, value in commit_files_dict.items():
+                              cursor.execute('''
+                                    INSERT IGNORE INTO files_in_commit (sha, file_id) VALUES (%s, %s)
+                                    ''', (commit.hash, value))
+                        
+                        n = len(commit_files) - len(commit_files_dict)
+
+                        if n > 0:
+                              eprint(str(n) + " file(s) of repo (type: " + type + ", sha: ", commit.hash, ") " + repo_id + " not found.")
+
+                  except AttributeError as error:
+                        eprint("File searching error. Printing Exception:")
+                        eprint(error)
+                  
+            os.system("rm -rf " + repo_path)
+     
+      except GitCommandError:
+            eprint("\n")
+            eprint("PyDriller Repository clone error (repo: " + repo_id + "): \n", sys.exc_info())
+            eprint("\n")
+            return
+
+
+def populate_discussions(cursor, conn, api, repo_name, type):
       """ Retrieve discussion from a repo and populate discussion table """
 
+      # If discussions are disabled, it is thrown an HTTPError Exception
       try:
             for discussion in api.get_repo_discussions(repo_id=repo_name, repo_type=type, token=ACCESS_TOKEN):
                   
                   details = api.get_discussion_details(repo_id=repo_name, discussion_num=discussion.num, repo_type=type, token=ACCESS_TOKEN)
 
                   author_name = details.__dict__.get("author")
-                  if author_name == 'deleted':
-                        author_name = ""
 
                   cursor.execute('''
-                                    INSERT IGNORE INTO discussion (num, repo_id, author, title, status, created_at, is_pull_request) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                                    ''', (details.__dict__.get("num"), type + 's/' + repo_name, author_name, details.__dict__.get("title"), details.__dict__.get("status"), details.__dict__.get("created_at"), details.__dict__.get("is_pull_request")))
+                  INSERT IGNORE INTO author (username, source) VALUES (%s, %s)
+                  ''', (author_name, "hf"))
+
+                  # commit the discussion author
+                  conn.commit()
+
+                  cursor.execute('''
+                        INSERT INTO discussion (num, repo_id, author, title, status, created_at, is_pull_request) VALUES (%s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE status = values(status)
+                        ''', (details.__dict__.get("num"), type + 's/' + repo_name, author_name, details.__dict__.get("title"), details.__dict__.get("status"), details.__dict__.get("created_at"), details.__dict__.get("is_pull_request")))
+                  
+                  # commit the discussion
+                  conn.commit()
 
                   for event in details.events:
                         author_name = event.__dict__.get("author")
-                        if author_name == 'deleted':
-                              author_name = ""
 
+                        author = event.__dict__.get('_event').get('author')
+
+                        # Insertion of event author
+                        if author is not None:
+                              cursor.execute('''
+                                    INSERT INTO author (username, avatar_url, is_pro, fullname, type, source) VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE avatar_url = values(avatar_url), is_pro = values(is_pro), fullname = values(fullname), type = values(type), source = values(source)
+                                    ''', (author.get("name"), author.get("avatarUrl"), author.get("isPro"), author.get("fullname"), author.get("type"), "hf"))
+                              # commit author
+                              conn.commit()
+
+                        # Insertion of event
                         if event.type == "comment":
                               cursor.execute('''
                                     INSERT IGNORE INTO discussion_event (id, repo_id, discussion_num, type, created_at, author, content, edited, hidden, full_data) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -225,13 +327,6 @@ def populate_discussions(cursor, api, repo_name, type):
                               cursor.execute('''
                                     INSERT IGNORE INTO discussion_event (id, repo_id, discussion_num, type, created_at, author, old_title, new_title, full_data) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                                     ''', (event.__dict__.get("id"), type + 's/' + repo_name, discussion.num, event.__dict__.get("type"), event.__dict__.get("created_at"), author_name, event.__dict__.get("old_title"), event.__dict__.get("new_title"), str(event.__dict__.get("_event"))))
-                        
-                        author = event.__dict__.get('_event').get('author')
-
-                        if author is not None:
-                              cursor.execute('''
-                                    REPLACE INTO author (username, avatar_url, is_pro, fullname, type, source) VALUES (%s, %s, %s, %s, %s, %s)
-                                    ''', (author.get("name"), author.get("avatarUrl"), author.get("isPro"), author.get("fullname"), author.get("type"), "hf"))
       except Exception as e:
             eprint("---------DISCUSSIONS ERROR----------")
             eprint("Printing exception:")
@@ -239,253 +334,194 @@ def populate_discussions(cursor, api, repo_name, type):
             eprint("Repo: ", repo_name)
 
 
-
-def populate_commits(cursor, conn, repo_id, type):
-      """ importation of commit information using PyDriller """
-
-      # As we have to do some SELECTs to the database, we commit all the INSERTs until now
-      conn.commit()
-
-      url_prefix = ""
-      if type != "models":
-            url_prefix = type + '/'
-      
-
-      url = 'https://user:password@huggingface.co/' + url_prefix + repo_id
-
-      try:
-            subprocess.check_output(["git",  "clone",  "--bare",  url])
-      except subprocess.CalledProcessError:
-            eprint("HF Repository clone error (repo: " + repo_id + "): authentication error.\n")
-            return
-
-      # print(repo_id)
-      if '/' in repo_id:
-            repo_folder = repo_id.split('/')[1] + '.git'
-      else:
-            repo_folder = repo_id + '.git'
-
-      # path = os.getcwd() + '\\' + repo_folder # WINDOWS
-      path = os.getcwd() + '/' + repo_folder # LINUX
-      repo = Repository(path)
-      
-      
-      
-      try:
-            cursor.execute("SELECT filename, id FROM file WHERE repo_id=%s", [type + '/' + repo_id])
-            repo_files = dict(cursor.fetchall())
-
-            for commit in repo.traverse_commits():
-                  
-                  cursor.execute('''
-                  INSERT IGNORE INTO commits (sha, timestamp, message, author) VALUES (%s, %s, %s, %s)
-                  ''', (commit.hash, commit.author_date, commit.msg, commit.author.name))
-                  cursor.execute('''
-                  INSERT IGNORE INTO author (name, source) VALUES (%s, %s)
-                  ''', (commit.author.name, "commit"))
-
-                  n = 0
-
-                  # try:
-                  for file in commit.modified_files:
-                        file_id = repo_files.get(file.filename)
-                        if file_id is not None:
-                              cursor.execute('''
-                              INSERT IGNORE INTO files_in_commit (sha, file_id) VALUES (%s, %s)
-                              ''', (commit.hash, file_id))
-                        else:
-                              n += 1
-
-                  if n > 0:
-                        eprint(str(n) + " file(s) of repo (type: " + type + ", sha: ", commit.hash, ") " + repo_id + " not found.")
-                  
-            
-            # os.system("rmdir /q /s " + repo_folder) # WINDOWS
-            os.system("rm -rf " + repo_folder) # LINUX
-     
-      except GitCommandError:
-            eprint("\n")
-            eprint("PyDriller Repository clone error (repo: " + repo_id + "): \n", sys.exc_info())
-            eprint("\n")
-            return
-      
-
-
-def populate_models(cursor,conn, api, lower, upper, update):
+def populate_models(cursor, conn, api, lower, upper, limit_date):
       """ importation of the full information of models """
 
       print("Retrieving full information of models...")
-      models = api.list_models(full=True, cardData=True, fetch_config=True, use_auth_token=ACCESS_TOKEN)
-      print("Info retrieved!")
-
-      # models = sample(models, len(models))
+      # list(iter()) is a workaround until pagination is released in v0.14
+      # Apply sort to get the most recent repos (in descending order; direction = -1); Sort just returns 10k repos, use sorted method instead
+      hub_models = list(iter(api.list_models(full=True, cardData=True, fetch_config=True, use_auth_token=ACCESS_TOKEN)))
+      models = sorted(hub_models, key=lambda d: d.__dict__.get("lastModified"), reverse=True)
+      print("Info retrieved! Gathered", len(hub_models), "models")
+      
       print("Starting population into database...")
 
+      i = 0
+      full_update = True
+
       for model in itertools.islice(models, lower, upper):
-
-            ### This is a workaround I made to not add models when I updated some fields
             
-            if (update): #update only models already in the database
-                  to_update = False
-                  with open('models_id.txt') as f:
-                        lines = f.read().splitlines()
-                        if ('models/' + model.modelId in lines):
-                              to_update = True # It's one of the repos we gathered
+            model_id = "models/" + model.id
 
-                  # with open('commit_repo_id.txt') as f:
-                  #       lines = f.read().splitlines()
-                  #       if ('models/' + model.modelId in lines):
-                  #             to_update = False # We already populated this repo
-                  if to_update:
-                        populate_files(cursor, model.siblings, model.modelId, "models")
-                        populate_commits(cursor, conn, model.modelId, "models") # Just update commits
-                        populate_discussions(cursor, api, model.modelId, "model")
-            else:
-
-                  model_id = "models/" + model.id
-                  config = str(model.__dict__.get("config"))
-                  config = clean(config, no_emoji=True)
+            # Gather just those with modifications within the limit_date (e.g., last month)
+            if not full_update or parse(model.__dict__.get("lastModified")) < limit_date:
+                  full_update = False
                   cursor.execute('''
-                  INSERT INTO model (id, name, model_id, author, sha, last_modified, pipeline_tag, private, config, card_data, downloads, library_name, likes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), model_id = values(model_id), author = values(author), sha = values(sha), last_modified= values(last_modified), pipeline_tag = values(pipeline_tag), private = values(private), config = values(config), card_data = values(card_data), library_name = values(library_name), likes = values(likes))
-                  ''', (model_id, model.__dict__.get("id"), model.__dict__.get("modelId"), model.__dict__.get("author"), model.__dict__.get("sha"), model.__dict__.get("lastModified"), model.__dict__.get("pipeline_tag"), model.__dict__.get("private"), config, str(model.__dict__.get("cardData")), model.__dict__.get("downloads"), model.__dict__.get("library_name"), model.__dict__.get("likes")))
-                  
-                  if (model.__dict__.get("author") != None):
-                        cursor.execute('''
-                        INSERT IGNORE INTO author (name, source) VALUES (%s, %s)
-                        ''', (model.author, "hf_owner"))
+                  UPDATE repository 
+                  SET likes=%s
+                  WHERE id=%s
+                  ''', (model.__dict__.get("likes"), model_id))
+                  cursor.execute('''
+                  UPDATE model 
+                  SET downloads=%s
+                  WHERE model_id=%s
+                  ''', (model.__dict__.get("downloads"), model_id))
+                  continue
+            
+            i += 1
 
-                  populate_tags(cursor, model.tags, model.modelId, "models")
-                  populate_files(cursor, model.siblings, model.modelId, "models")
-                  populate_discussions(cursor, api, model.modelId, "model")
-                  populate_commits(cursor, conn, model.modelId, "models")
+            # TODO: Do workaround
+            if model.__dict__.get("id") in ["AmirHussein/icefall-asr-mgb2-conformer_ctc-2022-27-06", "datablations/lm1-misc","tktkdrrrrrrrrrrr/CivitAI_model_info"]:
+                  continue
+
+            if (model.__dict__.get("author") != None):
+                  cursor.execute('''
+                  INSERT IGNORE INTO author (username, source) VALUES (%s, %s)
+                  ''', (model.author, "hf_owner"))
+                  conn.commit()
+
+            # Cleaning of 'config' (strange characters, emojis, etc.)
+            config = str(model.__dict__.get("config"))
+            config = clean(config, no_emoji=True)
+
+            cursor.execute('''
+            INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)
+            ''', (model_id, model.__dict__.get("id"), "model", model.__dict__.get("author"), model.__dict__.get("sha"), model.__dict__.get("lastModified"), model.__dict__.get("private"), str(model.__dict__.get("cardData")), model.__dict__.get("gated"), model.__dict__.get("likes")))
+
+            # Commit to the DB because of the FK constraint
+            conn.commit()
+
+            cursor.execute('''
+            INSERT INTO model (model_id, pipeline_tag, downloads, library_name, config) VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE pipeline_tag = values(pipeline_tag), downloads = values(downloads), library_name = values(library_name), config = values(config)
+            ''', (model_id, model.__dict__.get("pipeline_tag"), model.__dict__.get("downloads"), model.__dict__.get("library_name"), config))
+            
+            
+            populate_tags(cursor, conn, model.tags, model.modelId, "models")
+            populate_files(cursor, model.siblings, model.modelId, "models")
+            conn.commit() # Commit of files
+            populate_commits(cursor, conn, model.modelId, "models")
+            populate_discussions(cursor, conn, api, model.modelId, "model")
 
 
-      print("Models populated!")
+      print(i, "models updated!")
+      print("Models population finished!")
 
 
-def populate_datasets(cursor, conn, api, lower, upper, update):
+def populate_datasets(cursor, conn, api, lower, upper, limit_date):
       """ importation of dataset data """
 
       print("Retrieving information of datasets...")
 
-      datasets = api.list_datasets(full=True, cardData=True, use_auth_token=ACCESS_TOKEN)
+      # cardData deprecated in v0.14, use just full
+      hub_datasets = list(iter(api.list_datasets(full=True, use_auth_token=ACCESS_TOKEN)))
+      datasets = sorted(hub_datasets, key=lambda d: d.__dict__.get("lastModified"), reverse=True)
 
+      print("Info retrieved! Gathered", len(hub_datasets), "datasets")
+
+      i = 0
+      full_update = True
 
       for dataset in itertools.islice(datasets, lower, upper):
 
-            
-            if (update): #update only models already in the database
-                  to_update = False
-                  with open('datasets_id.txt') as f:
-                        lines = f.read().splitlines()
-                        if ('datasets/' + dataset.id in lines):
-                              to_update = True # It's one of the repos we gathered
+            dataset_id = "datasets/" + dataset.__dict__.get("id")
 
-                  ## AUXILIARY FILES TO SELECT WHICH REPOS WE WANT
-                  # with open('commit_repo_id.txt') as f:
-                  #       lines = f.read().splitlines()
-                  #       if ('datasets/' + dataset.id in lines):
-                  #             to_update = False # We already populated this repo
-                  
-                  # with open('repos_to_do.txt') as f:
-                  #       lines = f.read().splitlines()
-                  #       if ('datasets/' + dataset.id in lines):
-                  #             to_update = False # We will do it another time
-
-                  if to_update:
-                        populate_dataset_files(cursor, dataset.id, api)
-                        populate_commits(cursor, conn, dataset.id, "datasets") # Just update commits
-                        populate_discussions(cursor, api, dataset.id, "dataset")
-            
-            else: 
-                  dataset_id = "datasets/" + dataset.__dict__.get("id")
-
+            if not full_update or parse(dataset.__dict__.get("lastModified")) < limit_date:
+                  full_update = False
                   cursor.execute('''
-                  INSERT INTO dataset (id, name, author, sha, last_modified, private, description, citation, card_data, gated, downloads, likes, paperswithcode_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), description = values(description), citation = values(citation), card_data = values(card_data), gated = values(gated), downloads = values(downloads), likes = values(likes), paperswithcode_id = values(paperswithcode_id)
-                  ''', (dataset_id, dataset.__dict__.get("id"), dataset.__dict__.get("author"), dataset.__dict__.get("sha"), dataset.__dict__.get("lastModified"), dataset.__dict__.get("private"), dataset.__dict__.get("description"), dataset.__dict__.get("citation"), str(dataset.__dict__.get("cardData")), dataset.__dict__.get("gated"), dataset.__dict__.get("downloads"), dataset.__dict__.get("likes"), dataset.__dict__.get("paperswithcode_id")))
-                  
-                  if (dataset.author != None):
-                        cursor.execute('''
-                        INSERT IGNORE INTO author (name, source) VALUES (%s, %s)
-                        ''', (dataset.author, "hf_owner"))
-                  
-                  
+                  UPDATE repository 
+                  SET likes=%s
+                  WHERE id=%s
+                  ''', (dataset.__dict__.get("likes"), dataset_id))
+                  cursor.execute('''
+                  UPDATE dataset
+                  SET downloads=%s
+                  WHERE dataset_id=%s
+                  ''', (dataset.__dict__.get("downloads"), dataset_id))
+                  continue
 
-                  # dataset.siblings is always None, but we can use another API endpoint
-                  n = 0
-                  while n < 5:
-                        try:
-                              populate_files(cursor, api.list_repo_files(repo_id=dataset.id, repo_type="dataset", use_auth_token=ACCESS_TOKEN), dataset.id, "datasets")
-                              n = 5
-                        except hf_errors.RepositoryNotFoundError as e:
-                              eprint("---------DATASET FILES ERROR---------")
-                              eprint("ERROR: Repository Not Found (Repo: (dataset) " + dataset.id + "). Printing exception...")
-                              eprint(e)
-                              n = 5
-                        except requests.exception.HTTPError as e:
-                              eprint("---------DATASET FILES ERROR---------")
-                              eprint("ERROR: HTTPError on repo (dataset): " + dataset.id + ". Exception:\n" + e)
-                              eprint("Retrying...")
-                              sleep(10)
-                              n = n + 1
-                  
-                  populate_tags(cursor, dataset.tags, dataset.id, "datasets")
-                  populate_discussions(cursor, api, dataset.id, "dataset")
-                  populate_commits(cursor, conn, dataset.id, "datasets")
+            i += 1
+            
+            # This repo is huge, it is needed a workaround when collecting the commits;
+            if dataset.__dict__.get("id") in ["ywchoi/mdpi_sept10", "ACL-OCL/acl-anthology-corpus", "uripper/ProductScreenshots", "gozfarb/ShareGPT_Vicuna_unfiltered","deepsynthbody/deepfake_ecg_full_train_validation_test"]:
+                  continue
+
+            if (dataset.author != None):
+                  cursor.execute('''
+                  INSERT IGNORE INTO author (username, source) VALUES (%s, %s)
+                  ''', (dataset.author, "hf_owner"))
+                  conn.commit()
+
+            # TODO: Change gated to String
+            cursor.execute('''
+            INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)
+            ''', (dataset_id, dataset.__dict__.get("id"), "dataset", dataset.__dict__.get("author"), dataset.__dict__.get("sha"), dataset.__dict__.get("lastModified"), dataset.__dict__.get("private"), str(dataset.__dict__.get("cardData")), None, dataset.__dict__.get("likes")))
+            conn.commit()
+
+            cursor.execute('''
+            INSERT INTO dataset (dataset_id, description, citation, paperswithcode_id, downloads) VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE description = values(description), citation = values(citation), paperswithcode_id = values(paperswithcode_id), downloads = values(downloads)
+            ''', (dataset_id, dataset.__dict__.get("description"), dataset.__dict__.get("citation"), dataset.__dict__.get("paperswithcode_id"), dataset.__dict__.get("downloads")))         
+            
+
+            # dataset.siblings is always None, but we can use another API endpoint
+            populate_tags(cursor, conn, dataset.tags, dataset.id, "datasets")
+            populate_dataset_files(cursor, dataset.id, api)                 
+            conn.commit()
+            populate_commits(cursor, conn, dataset.id, "datasets")
+            populate_discussions(cursor, conn, api, dataset.id, "dataset")
 
       
+      print(i, "datasets updated!")
       print("Dataset information retrieved!")
 
 
-def populate_spaces(cursor, conn, api, lower, upper, update):
+def populate_spaces(cursor, conn, api, lower, upper, limit_date):
       """ importation of space data """
 
       print("Retrieving information of spaces...")
-      spaces = api.list_spaces(full=True, use_auth_token=ACCESS_TOKEN) # gated is not retrieved
+      hub_spaces = list(iter(api.list_spaces(full=True, use_auth_token=ACCESS_TOKEN)))
+      spaces = sorted(hub_spaces, key=lambda d: d.__dict__.get("lastModified"), reverse=True)
 
-      
+      print("Info retrieved! Gathered", len(hub_spaces), "spaces")
+
       i = 0
+      full_update = True
+
       for space in itertools.islice(spaces, lower, upper):
+            
+            space_id = "spaces/" + space.__dict__.get("id")
+
+            if not full_update or parse(space.__dict__.get("lastModified")) < limit_date:
+                  full_update = False
+                  cursor.execute('''
+                  UPDATE repository 
+                  SET likes=%s
+                  WHERE id=%s
+                  ''', (space.__dict__.get("likes"), space_id))
+                  continue
+            
             i += 1
-            if (update): #update only models already in the database
-                  to_update = False
-                  with open('spaces_id.txt') as f:
-                        lines = f.read().splitlines()
-                        if ('spaces/' + space.id in lines):
-                              to_update = True # It's one of the repos we gathered
 
-                  # with open('commit_repo_id.txt') as f:
-                  #       lines = f.read().splitlines()
-                  #       if ('spaces/' + space.id in lines):
-                  #             to_update = False # We already populated this repo
-                  
-                  # with open('repos_to_do.txt') as f:
-                  #       lines = f.read().splitlines()
-                  #       if ('spaces/' + space.id in lines):
-                  #             to_update = False # We will do it another time
+            # This repo always give error with PyDriller, we'll have to take a look -> in web ERROR in deploying
+            if space.__dict__.get("id") in ["mfrashad/ClothingGAN", "mfrashad/CharacterGAN", "fdfdd12345628/Tainan", "patent/demo1"]:
+                  continue
+            
+            if (space.__dict__.get("author") != None):
+                  cursor.execute('''
+                  INSERT IGNORE INTO author (username, source) VALUES (%s, %s)
+                  ''', (space.author, "hf_owner"))
+                  conn.commit()
 
-                  if to_update:
-                        populate_files(cursor, space.siblings, space.id, "spaces")
-                        populate_commits(cursor, conn, space.id, "spaces") 
-                        populate_discussions(cursor, api, space.id, "space")
-                        
-            else:
-                  cursor.execute(''' 
-                  INSERT INTO space (id, name, author, sha, last_modified, private, card_data) VALUES (%s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data)
-                  ''', ("spaces/" + space.__dict__.get("id"), space.__dict__.get("id"), space.__dict__.get("author"), space.__dict__.get("sha"), space.__dict__.get("lastModified"), space.__dict__.get("private"), str(space.__dict__.get("cardData"))))
-                  
+            cursor.execute('''
+            INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)
+            ''', (space_id, space.__dict__.get("id"), "space", space.__dict__.get("author"), space.__dict__.get("sha"), space.__dict__.get("lastModified"), space.__dict__.get("private"), str(space.__dict__.get("cardData")), space.__dict__.get("gated"), space.__dict__.get("likes")))
+            
+            populate_tags(cursor, conn, space.tags, space.id, "spaces")
+            populate_files(cursor, space.siblings, space.id, "spaces")
+            conn.commit()
+            populate_commits(cursor, conn, space.id, "spaces")
+            populate_discussions(cursor, conn, api, space.id, "space")
 
-                  if (space.__dict__.get("author") != None):
-                        cursor.execute('''
-                        INSERT IGNORE INTO author (name, source) VALUES (%s, %s)
-                        ''', (space.author, "hf_owner"))
-                  
-                  populate_tags(cursor, space.tags, space.id, "spaces")
-                  populate_files(cursor, space.siblings, space.id, "spaces")
-                  populate_discussions(cursor, api, space.id, "space")
-                  populate_commits(cursor, conn, space.id, "spaces")
-
-
+      print(i, "spaces updated!")
       print("Spaces information retrieved!")
 
 
@@ -498,19 +534,23 @@ def main(argv):
         sys.exit(1)
 
       try:
-            opts, args = getopt.getopt(argv, "t:l:u:o:", [])
+            opts, args = getopt.getopt(argv, "t:l:u:", [])
       except getopt.GetoptError:
-            eprint("Wrong usage. USAGE: python databaseImport.py -t type -l lower_index -u upper_index -o anything(not implemented yet)")
+            eprint("Wrong usage. USAGE: python databaseImport.py -t type -l lower_index -u upper_index")
             sys.exit(1)
       
-      token_file = open("read_token", "r")
+      token_file = open("read_token", "r")      
       ACCESS_TOKEN = token_file.readline()
       token_file.close()
 
-      lower = 0
-      upper = 1000
+      # Monthly recovery, we just need the updates of the last month
+      limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=2)) # TODO: Change to 1
+
+
+      lower = None
+      upper = None
       type = ""
-      update = False
+      
       for opt, arg in opts:
             if opt in ("-t"):
                   type = arg
@@ -518,10 +558,7 @@ def main(argv):
                   lower = int(arg)
             if opt in ("-u"):
                   upper = int(arg)
-            if opt in ("-o"):
-                  update = True
 
-      # conn = create_connection_sqlite(r"hf_database.db") # TODO: change behaviour according to command line options
       conn = create_connection_mysql()
       c = conn.cursor()
       print("connection done")
@@ -537,11 +574,15 @@ def main(argv):
       api = HfApi()
 
       if type == "dataset":
-            populate_datasets(c, conn, api, lower, upper, update)
+            populate_datasets(c, conn, api, lower, upper, limit_date)
       elif type == "space":
-            populate_spaces(c, conn, api, lower, upper, update)
+            populate_spaces(c, conn, api, lower, upper, limit_date)
       elif type == "model":
-            populate_models(c, conn, api, lower, upper, update)
+            populate_models(c, conn, api, lower, upper, limit_date)
+      elif type == "all":
+            populate_datasets(c, conn, api, lower, upper, limit_date)
+            populate_spaces(c, conn, api, lower, upper, limit_date)
+            populate_models(c, conn, api, lower, upper, limit_date)
 
       # Save (commit) the changes
       conn.commit()
@@ -549,6 +590,9 @@ def main(argv):
       # We can also close the connection if we are done with it.
       # Just be sure any changes have been committed or they will be lost.
       conn.close()
+
+      if type == "dataset":
+            print("SKIPPED REPOS: ", SKIPPED_REPOS)
 
       exec_time = time.time() - start_time
       print("\nExecution time:")
