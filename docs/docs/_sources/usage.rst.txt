@@ -1,0 +1,76 @@
+Usage
+=====================
+
+
+Requirements
+---------------------
+
+To execute the ``databaseImport`` script, it is necessary having installed:
+
+* `Python <https://www.python.org/downloads/>`_ v3.9.12
+* `MariaDB <https://mariadb.com/kb/en/getting-installing-and-upgrading-mariadb/>`_ v10.3.39
+* `Git <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_ v2.20.1
+
+Furthermore, inside the extractor folder of the `GitHub repo <https://github.com/SOM-Research/HFCommunity/tree/main/extractor>`_ there is a ``requirements.txt`` to import all libraries necessary to execute the ``databaseImport`` script.
+At the command line (with pip installed):
+
+.. code-block:: console
+
+    $ pip install -r requirements.txt
+
+
+Configuration
+---------------------
+
+Before invoking the ``databaseImport`` script, it is necessary to fill (or create) the ``db.config`` file, in the same folder the script is located.
+The file follows a JSON structure, and must be defined as:
+
+.. code-block:: json
+
+    {
+        "host" : "hostname",
+        "port" : 0000,
+        "user" : "user",
+        "pass" : "psswd",
+        "database" : "db_name"
+    }
+
+The keywords in this file define:
+
+* **host**: The location of the MariaDB server and database (if self-hosted, ``"localhost"``).
+* **port**: Port used by the MariaDB server (by default 3306).
+* **user**: User to acces the MariaDB database (there is a default user as ``"root"``).
+* **pass**: Password of the user.
+* **database**: The database name. The database **must** be created before invoking the script.
+
+Execution
+---------------------
+
+Once installed the dependencies and libraries, the ``databaseImport`` script can be executed as follows:
+
+1. Clone this repository.
+2. Edit the ``db.config`` file according to your configuration.
+3. Launch the extractor via command line. The extract admits several parameters:
+
+.. code-block:: console
+
+    $ python databaseImport.py -t type -l lower_index -u upper_index -c
+
+
+python databaseImport.py -t <type>
+    It imports only a type of repositories (``type`` must be either ``model``, ``dataset`` or ``space``, or ``all`` if any type).
+    This flag is mandatory, 
+
+python databaseImport.py -l <index>
+    It selects the repositories above the ``index`` from the repositories retrieved of HFH. 
+    This is intended to be used when we want to populate a reduced version of the HFC database. 
+    Note that the slicing is done by the order of the retrieved repositories, thus doing a random selection of these.
+
+python databaseImport.py -u <index>
+    It selects the repositories below the ``index`` from the repositories retrieved of HFH. 
+    This is intended to be used when we want to populate a reduced version of the HFC database. 
+    Note that the slicing is done by the order of the retrieved repositories, thus doing a random selection of these.
+
+python databaseImport.py -c
+    It creates the database schema of HFC database (see `ER diagram <https://som-research.github.io/HFCommunity/download.html#er_diagram>`_). 
+    Intended to use in the first importation (the database specified in the ``config.db`` file must be created before). 

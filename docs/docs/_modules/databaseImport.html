@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>databaseImport &mdash; HFCommunity-extractor 1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HFCommunity-extractor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../databaseImport.html">Script docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support.html">Support</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HFCommunity-extractor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">databaseImport</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for databaseImport</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="sd">&quot;&quot;&quot; Script to retrieve HFH and Git data, and to create and to populate a MariaDB database &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">getopt</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">pydriller</span> <span class="kn">import</span> <span class="n">Repository</span>
+<span class="kn">from</span> <span class="nn">git.exc</span> <span class="kn">import</span> <span class="n">GitCommandError</span>
+<span class="c1"># import huggingface_hub.utils._errors as hf_errors</span>
+<span class="kn">import</span> <span class="nn">mysql.connector</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">huggingface_hub</span> <span class="kn">import</span> <span class="n">HfApi</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">cleantext</span> <span class="kn">import</span> <span class="n">clean</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">dateutil.parser</span> <span class="kn">import</span> <span class="n">parse</span>
+<span class="kn">import</span> <span class="nn">dateutil.relativedelta</span>
+<span class="kn">import</span> <span class="nn">pytz</span>
+
+
+<span class="n">ACCESS_TOKEN</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+<span class="n">SKIPPED_REPOS</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="c1"># AUXILIARY FUNCTIONS</span>
+<div class="viewcode-block" id="eprint"><a class="viewcode-back" href="../databaseImport.html#databaseImport.eprint">[docs]</a><span class="k">def</span> <span class="nf">eprint</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">      Auxiliar function to print errors to stderr.</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+      <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="onerror"><a class="viewcode-back" href="../databaseImport.html#databaseImport.onerror">[docs]</a><span class="k">def</span> <span class="nf">onerror</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">exc_info</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Error handler for ``shutil.rmtree``. Intended for Windows usage (e.g., `Acces Denied &lt;https://stackoverflow.com/questions/2656322/shutil-rmtree-fails-on-windows-with-access-is-denied&gt;`_)</span>
+
+<span class="sd">    If the error is due to an access error (read only file)</span>
+<span class="sd">    it attempts to add write permission and then retries.</span>
+
+<span class="sd">    If the error is for another reason it re-raises the error.</span>
+<span class="sd">    </span>
+<span class="sd">    Usage : ``shutil.rmtree(path, onerror=onerror)``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">stat</span>
+    <span class="c1"># Is the error an access error?</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IWUSR</span><span class="p">)</span>
+        <span class="n">func</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span></div>
+
+
+<span class="c1"># DB CONFIGURATION</span>
+<div class="viewcode-block" id="create_connection_mysql"><a class="viewcode-back" href="../databaseImport.html#databaseImport.create_connection_mysql">[docs]</a><span class="k">def</span> <span class="nf">create_connection_mysql</span><span class="p">():</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Configures a database connection to a MySQL/MariaDB database.</span>
+<span class="sd">      Database configuration file must be located in the path as a JSON file called `db.config`.</span>
+
+<span class="sd">      :return: The MySQL connector to the database specified in the configuration file.</span>
+<span class="sd">      :rtype: `connection.MySQLConnection`_</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="c1"># TODO: ... config file with the following structure:</span>
+      <span class="c1"># {</span>
+      <span class="c1">#       &quot;host&quot; : HOST,</span>
+      <span class="c1">#       &quot;port&quot; : PORT,</span>
+      <span class="c1">#       &quot;user&quot; : USER,</span>
+      <span class="c1">#       &quot;pass&quot; : PASS,</span>
+      <span class="c1">#       &quot;database&quot; : SCHEMANAME</span>
+      <span class="c1"># }</span>
+
+      <span class="n">conn</span> <span class="o">=</span> <span class="kc">None</span>
+      <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;db.config&#39;</span><span class="p">):</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;db.config&#39;</span><span class="p">))</span>
+      <span class="k">else</span><span class="p">:</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s1">&#39;db.config file not found!&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+      
+      <span class="k">try</span> <span class="p">:</span>
+            <span class="n">conn</span> <span class="o">=</span> <span class="n">mysql</span><span class="o">.</span><span class="n">connector</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;user&#39;</span><span class="p">],</span> <span class="n">password</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;pass&#39;</span><span class="p">],</span> <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;host&#39;</span><span class="p">],</span> <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;port&#39;</span><span class="p">],</span> <span class="n">database</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;database&#39;</span><span class="p">])</span>  
+      <span class="k">except</span><span class="p">:</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;Database connection failed&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">conn</span></div>
+
+
+<div class="viewcode-block" id="create_schema_mysql"><a class="viewcode-back" href="../databaseImport.html#databaseImport.create_schema_mysql">[docs]</a><span class="k">def</span> <span class="nf">create_schema_mysql</span><span class="p">(</span><span class="n">cursor</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Creates the database schema, following this `ER diagram &lt;https://som-research.github.io/HFCommunity/download.html#er_diagram&gt;`_.</span>
+
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Deleting tables...&quot;</span><span class="p">)</span>
+      
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS tag&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS author&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS file&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS files_in_repo&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS tags_in_repo&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS discussion&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS model&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS dataset&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS space&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS models_in_spaces&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS commits&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS files_in_commit&#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;DROP TABLE IF EXISTS discussion_event&#39;&#39;&#39;</span><span class="p">)</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Creating tables...&quot;</span><span class="p">)</span>
+
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS tag</span>
+<span class="s1">            (name VARCHAR(256) PRIMARY KEY)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS author</span>
+<span class="s1">            (name VARCHAR(256) PRIMARY KEY, avatar_url TEXT, is_pro INTEGER, fullname TEXT, type VARCHAR(64), source VARCHAR(256))</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS file</span>
+<span class="s1">            (id INTEGER PRIMARY KEY AUTO_INCREMENT, filename VARCHAR(500), repo_id VARCHAR(256), UNIQUE(filename, repo_id))</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS tags_in_repo</span>
+<span class="s1">            (tag_name VARCHAR(256), repo_id VARCHAR(256), PRIMARY KEY(tag_name, repo_id))</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS discussion</span>
+<span class="s1">            (num INTEGER, repo_id VARCHAR(256), author TEXT, title TEXT, status TEXT, created_at TEXT, is_pull_request INTEGER, PRIMARY KEY(num, repo_id))</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS model</span>
+<span class="s1">            (id VARCHAR(256) PRIMARY KEY, name TEXT, model_id TEXT, author TEXT, sha TEXT, last_modified TEXT, private INTEGER, pipeline_tag TEXT, downloads INTEGER, library_name TEXT, likes INTEGER, config LONGTEXT, card_data LONGTEXT, gated INTEGER)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS dataset</span>
+<span class="s1">            (id VARCHAR(256) PRIMARY KEY, name TEXT, author TEXT, sha TEXT, last_modified TEXT, private INTEGER, gated INTEGER, citation TEXT, description TEXT, downloads INTEGER, likes INTEGER, card_data LONGTEXT, paperswithcode_id TEXT)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS space</span>
+<span class="s1">            (id VARCHAR(256) PRIMARY KEY, name TEXT, author TEXT, sha TEXT, last_modified TEXT, private INTEGER, card_data LONGTEXT, gated INTEGER)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS models_in_spaces</span>
+<span class="s1">            (model_id VARCHAR(256), space_id VARCHAR(256), PRIMARY KEY(model_id, space_id))</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS commits</span>
+<span class="s1">            (sha VARCHAR(256) PRIMARY KEY, timestamp TEXT, message TEXT, author TEXT)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS files_in_commit</span>
+<span class="s1">            (sha VARCHAR(256), file_id INTEGER, PRIMARY KEY(sha, file_id))</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+      <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            CREATE TABLE IF NOT EXISTS discussion_event</span>
+<span class="s1">            (id VARCHAR(256) PRIMARY KEY, repo_id VARCHAR(256), discussion_num INTEGER,  type VARCHAR(64), created_at TEXT, author TEXT, content TEXT, edited INTEGER, hidden INTEGER, new_status TEXT, summary TEXT, sha TEXT, old_title TEXT, new_title TEXT, full_data LONGTEXT)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Tables created!&quot;</span><span class="p">)</span></div>
+
+
+<span class="c1"># POPULATE FUNCTIONS</span>
+<div class="viewcode-block" id="populate_tags"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_tags">[docs]</a><span class="k">def</span> <span class="nf">populate_tags</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of tag information. </span>
+<span class="sd">      It inserts tag information into the ``tag`` and ``tags_in_repo`` tables.</span>
+<span class="sd">      </span>
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      :param conn: The MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</span>
+<span class="sd">      :type conn: `connection.MySQLConnection`_</span>
+<span class="sd">      :param tags: A list of tag names.</span>
+<span class="sd">      :type tags: list[str]</span>
+<span class="sd">      :param repo_name: The name of the repository.</span>
+<span class="sd">      :type repo_name: str</span>
+<span class="sd">      :param type: The type of the repository (i.e., model, dataset or space)</span>
+<span class="sd">      :type type: str</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+  
+      <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT IGNORE INTO tag (name) VALUES (</span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">[</span><span class="n">tag</span><span class="p">])</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span> <span class="c1"># Commit changes to DB to fulfill FK restriction</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT IGNORE INTO tags_in_repo (tag_name, repo_id) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">repo_name</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="populate_files"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_files">[docs]</a><span class="k">def</span> <span class="nf">populate_files</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of file information.</span>
+<span class="sd">      It inserts file information into ``file`` table.</span>
+
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor &lt;https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html&gt;`_</span>
+<span class="sd">      :param files: A list of filenames.</span>
+<span class="sd">      :type files: list[str]</span>
+<span class="sd">      :param repo_name: The name of the repository.</span>
+<span class="sd">      :type repo_name: str</span>
+<span class="sd">      :param type: The type of the repository (i.e., model, dataset or space) </span>
+<span class="sd">      :type type: str</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+ 
+      <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;models&quot;</span> <span class="ow">or</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;spaces&quot;</span><span class="p">:</span>
+                  <span class="n">filename</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">rfilename</span>
+            <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;datasets&quot;</span><span class="p">:</span>
+                  <span class="n">filename</span> <span class="o">=</span> <span class="n">file</span>
+
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT IGNORE INTO file (filename, repo_id) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">repo_name</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="populate_dataset_files"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_dataset_files">[docs]</a><span class="k">def</span> <span class="nf">populate_dataset_files</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">dataset_id</span><span class="p">,</span> <span class="n">api</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of dataset file information.</span>
+<span class="sd">      Dataset objects retrieved from ``huggingface_hub`` library (API) do not include the file information of the repository.</span>
+<span class="sd">      The files can be retrieved using an auxiliar function (``api.list_repo_files``).</span>
+
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      :param dataset_id: The name of the dataset repository.</span>
+<span class="sd">      :type dataset_id: str</span>
+<span class="sd">      :param api: The huggingface_hub API object pointer.</span>
+<span class="sd">      :type api: `huggingface_hub.HfApi`_</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="c1"># Sometimes list_repo_files does not retreive info at first. We try 5 times.</span>
+      <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="k">while</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                  <span class="n">populate_files</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">api</span><span class="o">.</span><span class="n">list_repo_files</span><span class="p">(</span><span class="n">repo_id</span><span class="o">=</span><span class="n">dataset_id</span><span class="p">,</span> <span class="n">repo_type</span><span class="o">=</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span> <span class="n">use_auth_token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">),</span> <span class="n">dataset_id</span><span class="p">,</span> <span class="s2">&quot;datasets&quot;</span><span class="p">)</span>
+                  <span class="n">n</span> <span class="o">=</span> <span class="mi">5</span>
+            <span class="k">except</span><span class="p">:</span>
+                  <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;---------DATASET FILES ERROR---------&quot;</span><span class="p">)</span>
+                  <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;ERROR: Unknown (Repo: (dataset) &quot;</span> <span class="o">+</span> <span class="n">dataset_id</span> <span class="o">+</span> <span class="s2">&quot;). Printing exception...&quot;</span><span class="p">)</span>
+                  <span class="n">n</span> <span class="o">=</span> <span class="mi">5</span></div>
+
+
+<div class="viewcode-block" id="populate_commits"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_commits">[docs]</a><span class="k">def</span> <span class="nf">populate_commits</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">repo_id</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of commit information using PyDriller.</span>
+<span class="sd">      It inserts commit information into ``commits``, ``author`` and ``files_in_commit`` tables.</span>
+<span class="sd">      </span>
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      :param conn: The MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions. Used to commit changes to fulfill FK restrictions.</span>
+<span class="sd">      :type conn: `connection.MySQLConnection`_</span>
+<span class="sd">      :param repo_id: The full name (i.e., &quot;owner/repo_name&quot;) of the repository.</span>
+<span class="sd">      :type repo_id: str</span>
+<span class="sd">      :param type: The type of the repository (i.e., model, dataset or space)</span>
+<span class="sd">      :type type: str</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="c1"># As we have to do some SELECTs to the database, we commit all the INSERTs until now</span>
+      <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+      <span class="n">url_prefix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+      <span class="k">if</span> <span class="nb">type</span> <span class="o">!=</span> <span class="s2">&quot;models&quot;</span><span class="p">:</span>
+            <span class="n">url_prefix</span> <span class="o">=</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span>
+      
+
+      <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;https://user:password@huggingface.co/&#39;</span> <span class="o">+</span> <span class="n">url_prefix</span> <span class="o">+</span> <span class="n">repo_id</span>
+
+      <span class="c1"># repo_path = &quot;../&quot; + type + &quot;_bare_clone&quot; # WARNING: With this workaround we can just have one process per repo type</span>
+      <span class="n">repo_path</span> <span class="o">=</span> <span class="nb">type</span> <span class="o">+</span> <span class="s2">&quot;_bare_clone&quot;</span>
+
+      <span class="k">try</span><span class="p">:</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span>  <span class="s2">&quot;clone&quot;</span><span class="p">,</span>  <span class="s2">&quot;--bare&quot;</span><span class="p">,</span>  <span class="n">url</span><span class="p">,</span> <span class="n">repo_path</span><span class="p">])</span>
+      <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;HF Repository clone error (repo: &quot;</span> <span class="o">+</span> <span class="n">repo_id</span> <span class="o">+</span> <span class="s2">&quot;): authentication error.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+      
+
+      <span class="c1"># path = os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + &#39;/&#39; + type + &quot;_bare_clone&quot;</span>
+      <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">repo_path</span><span class="p">))</span>
+
+      <span class="n">repo</span> <span class="o">=</span> <span class="n">Repository</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+      
+      <span class="n">num_commits</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span>  <span class="s2">&quot;rev-list&quot;</span><span class="p">,</span>  <span class="s2">&quot;--count&quot;</span><span class="p">,</span> <span class="s2">&quot;HEAD&quot;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">))</span>
+      
+
+      <span class="c1"># We will skip repos with more than 2k commits or 30k files</span>
+      <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;datasets&#39;</span> <span class="ow">or</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;model&#39;</span><span class="p">:</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT COUNT(filename) FROM file WHERE repo_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">repo_id</span><span class="p">])</span>
+            <span class="n">num_files</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">num_commits</span><span class="o">&gt;</span><span class="mi">2000</span> <span class="ow">or</span> <span class="n">num_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">30000</span><span class="p">:</span>
+                  <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Repo: &quot;</span><span class="p">,</span> <span class="n">repo_id</span><span class="p">,</span> <span class="s2">&quot; skipped with num_commits: &quot;</span><span class="p">,</span> <span class="n">num_commits</span><span class="p">,</span> <span class="s2">&quot; and num_files: &quot;</span><span class="p">,</span> <span class="n">num_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                  <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">onerror</span><span class="o">=</span><span class="n">onerror</span><span class="p">)</span>
+                  <span class="c1"># os.system(&quot;rm -rf &quot; + repo_path)</span>
+                  <span class="k">global</span> <span class="n">SKIPPED_REPOS</span>
+                  <span class="n">SKIPPED_REPOS</span> <span class="o">=</span> <span class="n">SKIPPED_REPOS</span> <span class="o">+</span> <span class="mi">1</span>
+                  <span class="k">return</span>
+
+      <span class="c1"># Start with the commit importation</span>
+      <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT filename, id FROM file WHERE repo_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">repo_id</span><span class="p">])</span>
+            <span class="n">repo_files</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">())</span>
+
+            <span class="k">for</span> <span class="n">commit</span> <span class="ow">in</span> <span class="n">repo</span><span class="o">.</span><span class="n">traverse_commits</span><span class="p">():</span>
+                  
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  INSERT IGNORE INTO author (username, source) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">commit</span><span class="o">.</span><span class="n">author</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;commit&quot;</span><span class="p">))</span>
+                  <span class="c1"># Commit author</span>
+                  <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  INSERT IGNORE INTO commits (sha, timestamp, message, author) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">commit</span><span class="o">.</span><span class="n">hash</span><span class="p">,</span> <span class="n">commit</span><span class="o">.</span><span class="n">author_date</span><span class="p">,</span> <span class="n">commit</span><span class="o">.</span><span class="n">msg</span><span class="p">,</span> <span class="n">commit</span><span class="o">.</span><span class="n">author</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                  
+                  <span class="c1"># Commit the commit</span>
+                  <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                  <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># Check whether the files in the commit exist in the repo </span>
+                        <span class="c1"># (the file could be deleted, or renamed, so we think we should only track current files)</span>
+                        <span class="n">commit_files</span>      <span class="o">=</span> <span class="p">[</span><span class="n">file</span><span class="o">.</span><span class="n">new_path</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">commit</span><span class="o">.</span><span class="n">modified_files</span><span class="p">]</span>
+                        <span class="n">commit_files_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span><span class="n">repo_files</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">commit_files</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">repo_files</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+
+                        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">commit_files_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                              <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                                    INSERT IGNORE INTO files_in_commit (sha, file_id) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                                    &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">commit</span><span class="o">.</span><span class="n">hash</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                        
+                        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">commit_files</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">commit_files_dict</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                              <span class="n">eprint</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; file(s) of repo (type: &quot;</span> <span class="o">+</span> <span class="nb">type</span> <span class="o">+</span> <span class="s2">&quot;, sha: &quot;</span><span class="p">,</span> <span class="n">commit</span><span class="o">.</span><span class="n">hash</span><span class="p">,</span> <span class="s2">&quot;) &quot;</span> <span class="o">+</span> <span class="n">repo_id</span> <span class="o">+</span> <span class="s2">&quot; not found.&quot;</span><span class="p">)</span>
+
+                  <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                        <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;File searching error. Printing Exception:&quot;</span><span class="p">)</span>
+                        <span class="n">eprint</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+                  
+            <span class="c1"># os.system(&quot;rm -rf &quot; + repo_path)</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">onerror</span><span class="o">=</span><span class="n">onerror</span><span class="p">)</span>
+     
+      <span class="k">except</span> <span class="n">GitCommandError</span><span class="p">:</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;PyDriller Repository clone error (repo: &quot;</span> <span class="o">+</span> <span class="n">repo_id</span> <span class="o">+</span> <span class="s2">&quot;): </span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="populate_discussions"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_discussions">[docs]</a><span class="k">def</span> <span class="nf">populate_discussions</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of discussions information.</span>
+<span class="sd">      It inserts discussion information into ``discussion``, ``author`` and ``discussion_event`` tables.</span>
+<span class="sd">      </span>
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</span>
+<span class="sd">      :type  conn: `connection.MySQLConnection`_</span>
+<span class="sd">      :param api: The huggingface_hub API object pointer.</span>
+<span class="sd">      :type api: `huggingface_hub.HfApi`_</span>
+<span class="sd">      :param repo_name: The name of the repository.</span>
+<span class="sd">      :type repo_name: str</span>
+<span class="sd">      :param type: The type of the repository (i.e., model, dataset or space) </span>
+<span class="sd">      :type type: str</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="c1"># If discussions are disabled, it is thrown an HTTPError Exception</span>
+      <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">discussion</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">get_repo_discussions</span><span class="p">(</span><span class="n">repo_id</span><span class="o">=</span><span class="n">repo_name</span><span class="p">,</span> <span class="n">repo_type</span><span class="o">=</span><span class="nb">type</span><span class="p">,</span> <span class="n">token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">):</span>
+                  
+                  <span class="n">details</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">get_discussion_details</span><span class="p">(</span><span class="n">repo_id</span><span class="o">=</span><span class="n">repo_name</span><span class="p">,</span> <span class="n">discussion_num</span><span class="o">=</span><span class="n">discussion</span><span class="o">.</span><span class="n">num</span><span class="p">,</span> <span class="n">repo_type</span><span class="o">=</span><span class="nb">type</span><span class="p">,</span> <span class="n">token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">)</span>
+
+                  <span class="n">author_name</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">)</span>
+
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  INSERT IGNORE INTO author (username, source) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">author_name</span><span class="p">,</span> <span class="s2">&quot;hf&quot;</span><span class="p">))</span>
+
+                  <span class="c1"># commit the discussion author</span>
+                  <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                        INSERT INTO discussion (num, repo_id, author, title, status, created_at, is_pull_request) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">) ON DUPLICATE KEY UPDATE status = values(status)</span>
+<span class="s1">                        &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">details</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num&quot;</span><span class="p">),</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;s/&#39;</span> <span class="o">+</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">author_name</span><span class="p">,</span> <span class="n">details</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">),</span> <span class="n">details</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">),</span> <span class="n">details</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">),</span> <span class="n">details</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_pull_request&quot;</span><span class="p">)))</span>
+                  
+                  <span class="c1"># commit the discussion</span>
+                  <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                  <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">details</span><span class="o">.</span><span class="n">events</span><span class="p">:</span>
+                        <span class="n">author_name</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">)</span>
+
+                        <span class="n">author</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;_event&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;author&#39;</span><span class="p">)</span>
+
+                        <span class="c1"># Insertion of event author</span>
+                        <span class="k">if</span> <span class="n">author</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                              <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                                    INSERT INTO author (username, avatar_url, is_pro, fullname, type, source) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">) ON DUPLICATE KEY UPDATE avatar_url = values(avatar_url), is_pro = values(is_pro), fullname = values(fullname), type = values(type), source = values(source)</span>
+<span class="s1">                                    &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">author</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span> <span class="n">author</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;avatarUrl&quot;</span><span class="p">),</span> <span class="n">author</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;isPro&quot;</span><span class="p">),</span> <span class="n">author</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fullname&quot;</span><span class="p">),</span> <span class="n">author</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">),</span> <span class="s2">&quot;hf&quot;</span><span class="p">))</span>
+                              <span class="c1"># commit author</span>
+                              <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                        <span class="c1"># Insertion of event</span>
+                        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span>
+                              <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                                    INSERT IGNORE INTO discussion_event (id, repo_id, discussion_num, type, created_at, author, content, edited, hidden, full_data) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                                    &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;s/&#39;</span> <span class="o">+</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">discussion</span><span class="o">.</span><span class="n">num</span><span class="p">,</span>  <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">),</span> <span class="n">author_name</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;edited&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hidden&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_event&quot;</span><span class="p">))))</span>
+                        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;status-change&quot;</span><span class="p">:</span>
+                              <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                                    INSERT IGNORE INTO discussion_event (id, repo_id, discussion_num, type, created_at, author, new_status, full_data) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                                    &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;s/&#39;</span> <span class="o">+</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">discussion</span><span class="o">.</span><span class="n">num</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">),</span> <span class="n">author_name</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;new_status&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_event&quot;</span><span class="p">))))</span>
+                        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;commit&quot;</span><span class="p">:</span>
+                              <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                                    INSERT IGNORE INTO discussion_event (id, repo_id, discussion_num, type, created_at, author,summary, sha, full_data) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                                    &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;s/&#39;</span> <span class="o">+</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">discussion</span><span class="o">.</span><span class="n">num</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">),</span> <span class="n">author_name</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oid&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_event&quot;</span><span class="p">))))</span>
+                        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;title-change&quot;</span><span class="p">:</span>
+                              <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                                    INSERT IGNORE INTO discussion_event (id, repo_id, discussion_num, type, created_at, author, old_title, new_title, full_data) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                                    &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span> <span class="nb">type</span> <span class="o">+</span> <span class="s1">&#39;s/&#39;</span> <span class="o">+</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">discussion</span><span class="o">.</span><span class="n">num</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">),</span> <span class="n">author_name</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;old_title&quot;</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;new_title&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_event&quot;</span><span class="p">))))</span>
+      <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;---------DISCUSSIONS ERROR----------&quot;</span><span class="p">)</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;Printing exception:&quot;</span><span class="p">)</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;Repo: &quot;</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="populate_models"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_models">[docs]</a><span class="k">def</span> <span class="nf">populate_models</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of the information of models.</span>
+<span class="sd">      It retrieves the whole set of models from HFH, and optionally, it slices the set using the lower and upper params. </span>
+<span class="sd">      It inserts model information into ``repository``, ``model`` and ``author`` tables, and calls the populate methods to fill the remaining tables (not including ``populate_datasets`` and ``populate_spaces``).</span>
+<span class="sd">      </span>
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</span>
+<span class="sd">      :type conn: `connection.MySQLConnection &lt;https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html&gt;`_</span>
+<span class="sd">      :param api: The huggingface_hub API object pointer.</span>
+<span class="sd">      :type api: `huggingface_hub.HfApi &lt;https://huggingface.co/docs/huggingface_hub/v0.16.3/en/package_reference/hf_api#huggingface_hub.HfApi&gt;`_</span>
+<span class="sd">      :param lower: Lower bound of the slicing of the set of models</span>
+<span class="sd">      :type lower: int</span>
+<span class="sd">      :param upper: Upper bound of the slicing of the set of models</span>
+<span class="sd">      :type upper: int</span>
+<span class="sd">      :param limit_date: Date from which it starts to update the database (e.g., update the database values of the models that have been modified in the last month).</span>
+<span class="sd">      :type limit_date: datetime</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Retrieving full information of models...&quot;</span><span class="p">)</span>
+      <span class="c1"># list(iter()) is a workaround until pagination is released in v0.14</span>
+      <span class="c1"># Apply sort to get the most recent repos (in descending order; direction = -1); Sort just returns 10k repos, use sorted method instead</span>
+      <span class="n">hub_models</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_models</span><span class="p">(</span><span class="n">full</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cardData</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fetch_config</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_auth_token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">)))</span>
+      <span class="n">models</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hub_models</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hub_models</span><span class="p">),</span> <span class="s2">&quot;models&quot;</span><span class="p">)</span>
+      
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting population into database...&quot;</span><span class="p">)</span>
+
+      <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="n">full_update</span> <span class="o">=</span> <span class="kc">True</span>
+
+      <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
+            
+            <span class="n">model_id</span> <span class="o">=</span> <span class="s2">&quot;models/&quot;</span> <span class="o">+</span> <span class="n">model</span><span class="o">.</span><span class="n">id</span>
+
+            <span class="c1"># Gather just those with modifications within the limit_date (e.g., last month)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">full_update</span> <span class="ow">or</span> <span class="n">parse</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">limit_date</span><span class="p">:</span>
+                  <span class="n">full_update</span> <span class="o">=</span> <span class="kc">False</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  UPDATE repository </span>
+<span class="s1">                  SET likes=</span><span class="si">%s</span>
+<span class="s1">                  WHERE id=</span><span class="si">%s</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;likes&quot;</span><span class="p">),</span> <span class="n">model_id</span><span class="p">))</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  UPDATE model </span>
+<span class="s1">                  SET downloads=</span><span class="si">%s</span>
+<span class="s1">                  WHERE model_id=</span><span class="si">%s</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;downloads&quot;</span><span class="p">),</span> <span class="n">model_id</span><span class="p">))</span>
+                  <span class="k">continue</span>
+            
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># TODO: Do workaround</span>
+            <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;AmirHussein/icefall-asr-mgb2-conformer_ctc-2022-27-06&quot;</span><span class="p">,</span> <span class="s2">&quot;datablations/lm1-misc&quot;</span><span class="p">,</span><span class="s2">&quot;tktkdrrrrrrrrrrr/CivitAI_model_info&quot;</span><span class="p">]:</span>
+                  <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">):</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  INSERT IGNORE INTO author (username, source) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">author</span><span class="p">,</span> <span class="s2">&quot;hf_owner&quot;</span><span class="p">))</span>
+                  <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="c1"># Cleaning of &#39;config&#39; (strange characters, emojis, etc.)</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;config&quot;</span><span class="p">))</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">clean</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">no_emoji</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">),</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sha&quot;</span><span class="p">),</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;private&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cardData&quot;</span><span class="p">)),</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gated&quot;</span><span class="p">),</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;likes&quot;</span><span class="p">)))</span>
+
+            <span class="c1"># Commit to the DB because of the FK constraint</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT INTO model (model_id, pipeline_tag, downloads, library_name, config) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">) ON DUPLICATE KEY UPDATE pipeline_tag = values(pipeline_tag), downloads = values(downloads), library_name = values(library_name), config = values(config)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline_tag&quot;</span><span class="p">),</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;downloads&quot;</span><span class="p">),</span> <span class="n">model</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;library_name&quot;</span><span class="p">),</span> <span class="n">config</span><span class="p">))</span>
+            
+            
+            <span class="n">populate_tags</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">modelId</span><span class="p">,</span> <span class="s2">&quot;models&quot;</span><span class="p">)</span>
+            <span class="n">populate_files</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">siblings</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">modelId</span><span class="p">,</span> <span class="s2">&quot;models&quot;</span><span class="p">)</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span> <span class="c1"># Commit of files</span>
+            <span class="n">populate_commits</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">modelId</span><span class="p">,</span> <span class="s2">&quot;models&quot;</span><span class="p">)</span>
+            <span class="n">populate_discussions</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">modelId</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">)</span>
+
+
+      <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;models updated!&quot;</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Models population finished!&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="populate_datasets"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_datasets">[docs]</a><span class="k">def</span> <span class="nf">populate_datasets</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of the information of datasets.</span>
+<span class="sd">      It retrieves the whole set of datasets from HFH, and optionally, it slices the set using the lower and upper params. </span>
+<span class="sd">      It inserts dataset information into ``repository``, ``dataset`` and ``author`` tables, and calls the populate methods to fill the remaining tables (not including ``populate_models`` and ``populate_spaces``)..</span>
+<span class="sd">      </span>
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</span>
+<span class="sd">      :type conn: `connection.MySQLConnection`_</span>
+<span class="sd">      :param api: The huggingface_hub API object pointer.</span>
+<span class="sd">      :type api: `huggingface_hub.HfApi`_</span>
+<span class="sd">      :param lower: Lower bound of the slicing of the set of datasets</span>
+<span class="sd">      :type lower: int</span>
+<span class="sd">      :param upper: Upper bound of the slicing of the set of datasets</span>
+<span class="sd">      :type upper: int</span>
+<span class="sd">      :param limit_date: Date from which it starts to update the database (e.g., update the database values of the datasets that have been modified in the last month). </span>
+<span class="sd">      :type limit_date: datetime</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Retrieving information of datasets...&quot;</span><span class="p">)</span>
+
+      <span class="c1"># cardData deprecated in v0.14, use just full</span>
+      <span class="n">hub_datasets</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_datasets</span><span class="p">(</span><span class="n">full</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_auth_token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">)))</span>
+      <span class="n">datasets</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hub_datasets</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hub_datasets</span><span class="p">),</span> <span class="s2">&quot;datasets&quot;</span><span class="p">)</span>
+
+      <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="n">full_update</span> <span class="o">=</span> <span class="kc">True</span>
+
+      <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
+
+            <span class="n">dataset_id</span> <span class="o">=</span> <span class="s2">&quot;datasets/&quot;</span> <span class="o">+</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">full_update</span> <span class="ow">or</span> <span class="n">parse</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">limit_date</span><span class="p">:</span>
+                  <span class="n">full_update</span> <span class="o">=</span> <span class="kc">False</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  UPDATE repository </span>
+<span class="s1">                  SET likes=</span><span class="si">%s</span>
+<span class="s1">                  WHERE id=</span><span class="si">%s</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;likes&quot;</span><span class="p">),</span> <span class="n">dataset_id</span><span class="p">))</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  UPDATE dataset</span>
+<span class="s1">                  SET downloads=</span><span class="si">%s</span>
+<span class="s1">                  WHERE dataset_id=</span><span class="si">%s</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;downloads&quot;</span><span class="p">),</span> <span class="n">dataset_id</span><span class="p">))</span>
+                  <span class="k">continue</span>
+
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            
+            <span class="c1"># This repo is huge, it is needed a workaround when collecting the commits;</span>
+            <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ywchoi/mdpi_sept10&quot;</span><span class="p">,</span> <span class="s2">&quot;ACL-OCL/acl-anthology-corpus&quot;</span><span class="p">,</span> <span class="s2">&quot;uripper/ProductScreenshots&quot;</span><span class="p">,</span> <span class="s2">&quot;gozfarb/ShareGPT_Vicuna_unfiltered&quot;</span><span class="p">,</span><span class="s2">&quot;deepsynthbody/deepfake_ecg_full_train_validation_test&quot;</span><span class="p">]:</span>
+                  <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">author</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">):</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  INSERT IGNORE INTO author (username, source) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">author</span><span class="p">,</span> <span class="s2">&quot;hf_owner&quot;</span><span class="p">))</span>
+                  <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="c1"># TODO: Change gated to String</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">dataset_id</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span> <span class="s2">&quot;dataset&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sha&quot;</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;private&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cardData&quot;</span><span class="p">)),</span> <span class="kc">None</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;likes&quot;</span><span class="p">)))</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT INTO dataset (dataset_id, description, citation, paperswithcode_id, downloads) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">) ON DUPLICATE KEY UPDATE description = values(description), citation = values(citation), paperswithcode_id = values(paperswithcode_id), downloads = values(downloads)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">dataset_id</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;citation&quot;</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;paperswithcode_id&quot;</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;downloads&quot;</span><span class="p">)))</span>         
+            
+
+            <span class="c1"># dataset.siblings is always None, but we can use another API endpoint</span>
+            <span class="n">populate_tags</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;datasets&quot;</span><span class="p">)</span>
+            <span class="n">populate_dataset_files</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">api</span><span class="p">)</span>                 
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">populate_commits</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;datasets&quot;</span><span class="p">)</span>
+            <span class="n">populate_discussions</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;dataset&quot;</span><span class="p">)</span>
+
+      
+      <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;datasets updated!&quot;</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Dataset information retrieved!&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="populate_spaces"><a class="viewcode-back" href="../databaseImport.html#databaseImport.populate_spaces">[docs]</a><span class="k">def</span> <span class="nf">populate_spaces</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">      Importation of the information of spaces.</span>
+<span class="sd">      It retrieves the whole set of spaces from HFH, and optionally, it slices the set using the lower and upper params. </span>
+<span class="sd">      It inserts model information into ``repository`` and ``author`` tables, and calls the populate methods to fill the remaining tables (not including ``populate_models`` and ``populate_datasets``).</span>
+<span class="sd">      </span>
+<span class="sd">      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.</span>
+<span class="sd">      :type cursor: `cursor.MySQLCursor`_</span>
+<span class="sd">      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</span>
+<span class="sd">      :type conn: `connection.MySQLConnection`_</span>
+<span class="sd">      :param api: The huggingface_hub API object pointer.</span>
+<span class="sd">      :type api: `huggingface_hub.HfApi`_</span>
+<span class="sd">      :param lower: Lower bound of the slicing of the set of spaces</span>
+<span class="sd">      :type lower: int</span>
+<span class="sd">      :param upper: Upper bound of the slicing of the set of spaces</span>
+<span class="sd">      :type upper: int</span>
+<span class="sd">      :param limit_date: Date from which it starts to update the database (e.g., update the database values of the spaces that have been modified in the last month).</span>
+<span class="sd">      :type limit_date: datetime</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Retrieving information of spaces...&quot;</span><span class="p">)</span>
+      <span class="n">hub_spaces</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_spaces</span><span class="p">(</span><span class="n">full</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_auth_token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">)))</span>
+      <span class="n">spaces</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hub_spaces</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hub_spaces</span><span class="p">),</span> <span class="s2">&quot;spaces&quot;</span><span class="p">)</span>
+
+      <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="n">full_update</span> <span class="o">=</span> <span class="kc">True</span>
+
+      <span class="k">for</span> <span class="n">space</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">spaces</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
+            
+            <span class="n">space_id</span> <span class="o">=</span> <span class="s2">&quot;spaces/&quot;</span> <span class="o">+</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">full_update</span> <span class="ow">or</span> <span class="n">parse</span><span class="p">(</span><span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">limit_date</span><span class="p">:</span>
+                  <span class="n">full_update</span> <span class="o">=</span> <span class="kc">False</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  UPDATE repository </span>
+<span class="s1">                  SET likes=</span><span class="si">%s</span>
+<span class="s1">                  WHERE id=</span><span class="si">%s</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;likes&quot;</span><span class="p">),</span> <span class="n">space_id</span><span class="p">))</span>
+                  <span class="k">continue</span>
+            
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># This repo always give error with PyDriller, we&#39;ll have to take a look -&gt; in web ERROR in deploying</span>
+            <span class="k">if</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;mfrashad/ClothingGAN&quot;</span><span class="p">,</span> <span class="s2">&quot;mfrashad/CharacterGAN&quot;</span><span class="p">,</span> <span class="s2">&quot;fdfdd12345628/Tainan&quot;</span><span class="p">,</span> <span class="s2">&quot;patent/demo1&quot;</span><span class="p">]:</span>
+                  <span class="k">continue</span>
+            
+            <span class="k">if</span> <span class="p">(</span><span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">):</span>
+                  <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                  INSERT IGNORE INTO author (username, source) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span>
+<span class="s1">                  &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">space</span><span class="o">.</span><span class="n">author</span><span class="p">,</span> <span class="s2">&quot;hf_owner&quot;</span><span class="p">))</span>
+                  <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">space_id</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span> <span class="s2">&quot;space&quot;</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">),</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sha&quot;</span><span class="p">),</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;private&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cardData&quot;</span><span class="p">)),</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gated&quot;</span><span class="p">),</span> <span class="n">space</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;likes&quot;</span><span class="p">)))</span>
+            
+            <span class="n">populate_tags</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;spaces&quot;</span><span class="p">)</span>
+            <span class="n">populate_files</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="n">siblings</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;spaces&quot;</span><span class="p">)</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">populate_commits</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;spaces&quot;</span><span class="p">)</span>
+            <span class="n">populate_discussions</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">space</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;space&quot;</span><span class="p">)</span>
+
+      <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;spaces updated!&quot;</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Spaces information retrieved!&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../databaseImport.html#databaseImport.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="p">):</span>
+<span class="w">      </span><span class="sd">&quot;&quot;&quot; Main method. Called when invoking the script. &quot;&quot;&quot;</span>
+
+      <span class="c1"># The execution time is measured and dumped to stdout</span>
+      <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+      <span class="k">try</span><span class="p">:</span>
+            <span class="n">opts</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="n">getopt</span><span class="o">.</span><span class="n">getopt</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="s2">&quot;t:l:u:db&quot;</span><span class="p">,</span> <span class="p">[])</span>
+      <span class="k">except</span> <span class="n">getopt</span><span class="o">.</span><span class="n">GetoptError</span><span class="p">:</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;Wrong usage. USAGE: python databaseImport.py -t type&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+      
+      <span class="c1"># Out file</span>
+      <span class="c1"># out=open(&#39;path&#39;)</span>
+      <span class="c1"># print(&quot;,&quot;,file=out)</span>
+      
+      <span class="n">token_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;read_token&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span>      
+      <span class="n">ACCESS_TOKEN</span> <span class="o">=</span> <span class="n">token_file</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+      <span class="n">token_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+      <span class="c1"># Monthly recovery, we just need the updates of the last month; Can be configured to N months</span>
+      <span class="n">limit_date</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">UTC</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">dateutil</span><span class="o">.</span><span class="n">relativedelta</span><span class="o">.</span><span class="n">relativedelta</span><span class="p">(</span><span class="n">months</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+
+      <span class="n">lower</span> <span class="o">=</span> <span class="kc">None</span>
+      <span class="n">upper</span> <span class="o">=</span> <span class="kc">None</span>
+      <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+      
+      <span class="k">for</span> <span class="n">opt</span><span class="p">,</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">opts</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">opt</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;-t&quot;</span><span class="p">):</span>
+                  <span class="nb">type</span> <span class="o">=</span> <span class="n">arg</span>
+            <span class="k">if</span> <span class="n">opt</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;-l&quot;</span><span class="p">):</span>
+                  <span class="n">lower</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">opt</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;-u&quot;</span><span class="p">):</span>
+                  <span class="n">upper</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">opt</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;-c&quot;</span><span class="p">):</span>
+                  <span class="n">create_schema_mysql</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                  <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Database schema created!&quot;</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;Wrong usage. Flag -t with argument is mandatory. USAGE: python databaseImport.py -t type&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+      <span class="n">conn</span> <span class="o">=</span> <span class="n">create_connection_mysql</span><span class="p">()</span>
+      <span class="n">c</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;connection done&quot;</span><span class="p">)</span>
+
+      <span class="c1"># Settings to avoid formatting error when inserting text</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;SET NAMES utf8mb4&#39;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SET CHARACTER SET utf8mb4&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SET character_set_connection=utf8mb4&quot;</span><span class="p">)</span>
+
+
+      <span class="n">api</span> <span class="o">=</span> <span class="n">HfApi</span><span class="p">()</span>
+
+      <span class="c1"># Import by type. </span>
+      <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;dataset&quot;</span><span class="p">:</span>
+            <span class="n">populate_datasets</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;space&quot;</span><span class="p">:</span>
+            <span class="n">populate_spaces</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;model&quot;</span><span class="p">:</span>
+            <span class="n">populate_models</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
+            <span class="n">populate_datasets</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">)</span>
+            <span class="n">populate_spaces</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">)</span>
+            <span class="n">populate_models</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">limit_date</span><span class="p">)</span>
+
+      <span class="c1"># Save (commit) the changes</span>
+      <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+      
+      <span class="c1"># We can also close the connection if we are done with it.</span>
+      <span class="c1"># Just be sure any changes have been committed or they will be lost.</span>
+      <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+      <span class="c1"># TODO: Workaround for skipped repos</span>
+      <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;dataset&quot;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;SKIPPED REPOS: &quot;</span><span class="p">,</span> <span class="n">SKIPPED_REPOS</span><span class="p">)</span>
+
+      <span class="c1"># Printing execution time...</span>
+      <span class="n">exec_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Execution time:&quot;</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;--- </span><span class="si">%s</span><span class="s2"> seconds ---&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">exec_time</span><span class="p">))</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;--- </span><span class="si">%s</span><span class="s2"> minutes ---&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">exec_time</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;--- </span><span class="si">%s</span><span class="s2"> hours ---&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">exec_time</span><span class="o">/</span><span class="mi">3600</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Creative Commons Attribution-ShareAlike 4.0 International License.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

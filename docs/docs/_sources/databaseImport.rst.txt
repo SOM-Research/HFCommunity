@@ -1,0 +1,7 @@
+Script docs
+=====================
+
+.. automodule:: databaseImport
+   :members:
+   :undoc-members:
+   :show-inheritance:

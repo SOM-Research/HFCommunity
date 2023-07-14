@@ -1,0 +1,26 @@
+.. HFCommunity-extractor documentation master file, created by
+   sphinx-quickstart on Wed Jul 12 15:45:38 2023.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to HFCommunity-extractor's documentation!
+=================================================
+
+This website hosts the technical documentation of the `HFCommunity <https://som-research.github.io/HFCommunity/>`_ extractor script.
+The repository of HFCommunity can be found `here <https://github.com/SOM-Research/HFCommunity/>`_.
+....
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Contents
+
+   databaseImport
+   usage
+   support
+
+.. Indices and tables
+.. ==================
+
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`

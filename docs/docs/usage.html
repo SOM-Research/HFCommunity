@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usage &mdash; HFCommunity-extractor 1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Support" href="support.html" />
+    <link rel="prev" title="Script docs" href="databaseImport.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            HFCommunity-extractor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="databaseImport.html">Script docs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execution">Execution</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">HFCommunity-extractor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Usage</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/usage.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h1>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this heading"></a></h2>
+<p>To execute the <code class="docutils literal notranslate"><span class="pre">databaseImport</span></code> script, it is necessary having installed:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.python.org/downloads/">Python</a> v3.9.12</p></li>
+<li><p><a class="reference external" href="https://mariadb.com/kb/en/getting-installing-and-upgrading-mariadb/">MariaDB</a> v10.3.39</p></li>
+<li><p><a class="reference external" href="https://git-scm.com/book/en/v2/Getting-Started-Installing-Git">Git</a> v2.20.1</p></li>
+</ul>
+<p>Furthermore, inside the extractor folder of the <a class="reference external" href="https://github.com/SOM-Research/HFCommunity/tree/main/extractor">GitHub repo</a> there is a <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> to import all libraries necessary to execute the <code class="docutils literal notranslate"><span class="pre">databaseImport</span></code> script.
+At the command line (with pip installed):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</pre></div>
+</div>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading"></a></h2>
+<p>Before invoking the <code class="docutils literal notranslate"><span class="pre">databaseImport</span></code> script, it is necessary to fill (or create) the <code class="docutils literal notranslate"><span class="pre">db.config</span></code> file, in the same folder the script is located.
+The file follows a JSON structure, and must be defined as:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;host&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hostname&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;port&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0000</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;user&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;pass&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;psswd&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;database&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;db_name&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The keywords in this file define:</p>
+<ul class="simple">
+<li><p><strong>host</strong>: The location of the MariaDB server and database (if self-hosted, <code class="docutils literal notranslate"><span class="pre">&quot;localhost&quot;</span></code>).</p></li>
+<li><p><strong>port</strong>: Port used by the MariaDB server (by default 3306).</p></li>
+<li><p><strong>user</strong>: User to acces the MariaDB database (there is a default user as <code class="docutils literal notranslate"><span class="pre">&quot;root&quot;</span></code>).</p></li>
+<li><p><strong>pass</strong>: Password of the user.</p></li>
+<li><p><strong>database</strong>: The database name. The database <strong>must</strong> be created before invoking the script.</p></li>
+</ul>
+</section>
+<section id="execution">
+<h2>Execution<a class="headerlink" href="#execution" title="Permalink to this heading"></a></h2>
+<p>Once installed the dependencies and libraries, the <code class="docutils literal notranslate"><span class="pre">databaseImport</span></code> script can be executed as follows:</p>
+<ol class="arabic simple">
+<li><p>Clone this repository.</p></li>
+<li><p>Edit the <code class="docutils literal notranslate"><span class="pre">db.config</span></code> file according to your configuration.</p></li>
+<li><p>Launch the extractor via command line. The extract admits several parameters:</p></li>
+</ol>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span><span class="nb">type</span><span class="w"> </span>-l<span class="w"> </span>lower_index<span class="w"> </span>-u<span class="w"> </span>upper_index<span class="w"> </span>-c
+</pre></div>
+</div>
+<dl class="simple">
+<dt>python databaseImport.py -t &lt;type&gt;</dt><dd><p>It imports only a type of repositories (<code class="docutils literal notranslate"><span class="pre">type</span></code> must be either <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">dataset</span></code> or <code class="docutils literal notranslate"><span class="pre">space</span></code>, or <code class="docutils literal notranslate"><span class="pre">all</span></code> if any type).
+This flag is mandatory,</p>
+</dd>
+<dt>python databaseImport.py -l &lt;index&gt;</dt><dd><p>It selects the repositories above the <code class="docutils literal notranslate"><span class="pre">index</span></code> from the repositories retrieved of HFH.
+This is intended to be used when we want to populate a reduced version of the HFC database.
+Note that the slicing is done by the order of the retrieved repositories, thus doing a random selection of these.</p>
+</dd>
+<dt>python databaseImport.py -u &lt;index&gt;</dt><dd><p>It selects the repositories below the <code class="docutils literal notranslate"><span class="pre">index</span></code> from the repositories retrieved of HFH.
+This is intended to be used when we want to populate a reduced version of the HFC database.
+Note that the slicing is done by the order of the retrieved repositories, thus doing a random selection of these.</p>
+</dd>
+<dt>python databaseImport.py -c</dt><dd><p>It creates the database schema of HFC database (see <a class="reference external" href="https://som-research.github.io/HFCommunity/download.html#er_diagram">ER diagram</a>).
+Intended to use in the first importation (the database specified in the <code class="docutils literal notranslate"><span class="pre">config.db</span></code> file must be created before).</p>
+</dd>
+</dl>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="databaseImport.html" class="btn btn-neutral float-left" title="Script docs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="support.html" class="btn btn-neutral float-right" title="Support" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Creative Commons Attribution-ShareAlike 4.0 International License.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
