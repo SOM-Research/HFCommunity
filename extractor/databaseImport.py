@@ -1,20 +1,15 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
+""" Script to retrieve HFH and Git data, and to create and to populate a MariaDB database """
 import getopt
 import subprocess
 import sys
 import os
-import sqlite3 
-import huggingface_hub
-import requests
+import shutil
 import time
 from pydriller import Repository
 from git.exc import GitCommandError
-import huggingface_hub.utils._errors as hf_errors
 import mysql.connector
 import json
-from random import sample
 from huggingface_hub import HfApi
 import itertools
 from cleantext import clean
@@ -27,24 +22,51 @@ import pytz
 ACCESS_TOKEN = ''
 SKIPPED_REPOS = 0
 
-# ERROR PRINTING
+# AUXILIARY FUNCTIONS
 def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+      """
+      Auxiliar function to print errors to stderr.
+      """
+      print(*args, file=sys.stderr, **kwargs)
+
+def onerror(func, path, exc_info):
+    """
+    Error handler for ``shutil.rmtree``. Intended for Windows usage (e.g., `Acces Denied <https://stackoverflow.com/questions/2656322/shutil-rmtree-fails-on-windows-with-access-is-denied>`_)
+
+    If the error is due to an access error (read only file)
+    it attempts to add write permission and then retries.
+
+    If the error is for another reason it re-raises the error.
+    
+    Usage : ``shutil.rmtree(path, onerror=onerror)``
+    """
+    import stat
+    # Is the error an access error?
+    if not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise
 
 
 # DB CONFIGURATION
 def create_connection_mysql():
       """ 
-      Create a database connection to a MySQL/MariaDB database.
-      Database configuration file must be located in the path as a JSON file called db.config with the following structure:
-      {
-            "host" : HOST,
-            "port" : PORT,
-            "user" : USER,
-            "pass" : PASS,
-            "database" : SCHEMANAME
-      }
+      Configures a database connection to a MySQL/MariaDB database.
+      Database configuration file must be located in the path as a JSON file called `db.config`.
+
+      :return: The MySQL connector to the database specified in the configuration file.
+      :rtype: `connection.MySQLConnection`_
       """
+
+      # TODO: ... config file with the following structure:
+      # {
+      #       "host" : HOST,
+      #       "port" : PORT,
+      #       "user" : USER,
+      #       "pass" : PASS,
+      #       "database" : SCHEMANAME
+      # }
 
       conn = None
       if os.path.exists('db.config'):
@@ -62,7 +84,12 @@ def create_connection_mysql():
 
 
 def create_schema_mysql(cursor):
-      """ create the database schema """
+      """ 
+      Creates the database schema, following this `ER diagram <https://som-research.github.io/HFCommunity/download.html#er_diagram>`_.
+
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      """
 
       print("Deleting tables...")
       
@@ -136,7 +163,21 @@ def create_schema_mysql(cursor):
 
 # POPULATE FUNCTIONS
 def populate_tags(cursor, conn, tags, repo_name, type):
-      """ importation of tag information """
+      """ 
+      Importation of tag information. 
+      It inserts tag information into the ``tag`` and ``tags_in_repo`` tables.
+      
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param conn: The MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.
+      :type conn: `connection.MySQLConnection`_
+      :param tags: A list of tag names.
+      :type tags: list[str]
+      :param repo_name: The name of the repository.
+      :type repo_name: str
+      :param type: The type of the repository (i.e., model, dataset or space)
+      :type type: str
+      """
   
       for tag in tags:
             
@@ -150,7 +191,19 @@ def populate_tags(cursor, conn, tags, repo_name, type):
 
 
 def populate_files(cursor, files, repo_name, type):
-      """ importation of file information (just API) """
+      """ 
+      Importation of file information.
+      It inserts file information into ``file`` table.
+
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor <https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html>`_
+      :param files: A list of filenames.
+      :type files: list[str]
+      :param repo_name: The name of the repository.
+      :type repo_name: str
+      :param type: The type of the repository (i.e., model, dataset or space) 
+      :type type: str
+      """
  
       for file in files:
             if type == "models" or type == "spaces":
@@ -164,7 +217,18 @@ def populate_files(cursor, files, repo_name, type):
 
 
 def populate_dataset_files(cursor, dataset_id, api):
-      """ Importation of dataset file information """
+      """ 
+      Importation of dataset file information.
+      Dataset objects retrieved from ``huggingface_hub`` library (API) do not include the file information of the repository.
+      The files can be retrieved using an auxiliar function (``api.list_repo_files``).
+
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param dataset_id: The name of the dataset repository.
+      :type dataset_id: str
+      :param api: The huggingface_hub API object pointer.
+      :type api: `huggingface_hub.HfApi`_
+      """
 
       # Sometimes list_repo_files does not retreive info at first. We try 5 times.
       n = 0
@@ -179,7 +243,19 @@ def populate_dataset_files(cursor, dataset_id, api):
 
 
 def populate_commits(cursor, conn, repo_id, type):
-      """ importation of commit information using PyDriller """
+      """ 
+      Importation of commit information using PyDriller.
+      It inserts commit information into ``commits``, ``author`` and ``files_in_commit`` tables.
+      
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param conn: The MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions. Used to commit changes to fulfill FK restrictions.
+      :type conn: `connection.MySQLConnection`_
+      :param repo_id: The full name (i.e., "owner/repo_name") of the repository.
+      :type repo_id: str
+      :param type: The type of the repository (i.e., model, dataset or space)
+      :type type: str
+      """
 
       # As we have to do some SELECTs to the database, we commit all the INSERTs until now
       conn.commit()
@@ -191,22 +267,18 @@ def populate_commits(cursor, conn, repo_id, type):
 
       url = 'https://user:password@huggingface.co/' + url_prefix + repo_id
 
-      repo_path = "../" + type + "_bare_clone" # WARNING: With this workaround we can just have one process per repo type
+      # repo_path = "../" + type + "_bare_clone" # WARNING: With this workaround we can just have one process per repo type
+      repo_path = type + "_bare_clone"
 
       try:
             subprocess.check_output(["git",  "clone",  "--bare",  url, repo_path])
       except subprocess.CalledProcessError:
             eprint("HF Repository clone error (repo: " + repo_id + "): authentication error.\n")
             return
+      
 
-      # Some repos are like 'author/reponame' and others just 'reponame'
-      if '/' in repo_id:
-            # We get just 'reponame'
-            repo_folder = repo_id.split('/')[1] + '.git'
-      else:
-            repo_folder = repo_id + '.git'
-
-      path = os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + '/' + type + "_bare_clone"
+      # path = os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + '/' + type + "_bare_clone"
+      path = os.path.abspath(os.path.join(os.getcwd(), repo_path))
 
       repo = Repository(path)
       
@@ -219,7 +291,8 @@ def populate_commits(cursor, conn, repo_id, type):
             num_files = cursor.fetchone()
             if num_commits>2000 or num_files[0] > 30000:
                   print("Repo: ", repo_id, " skipped with num_commits: ", num_commits, " and num_files: ", num_files[0])
-                  os.system("rm -rf " + repo_path)
+                  shutil.rmtree(path, ignore_errors=False, onerror=onerror)
+                  # os.system("rm -rf " + repo_path)
                   global SKIPPED_REPOS
                   SKIPPED_REPOS = SKIPPED_REPOS + 1
                   return
@@ -263,7 +336,8 @@ def populate_commits(cursor, conn, repo_id, type):
                         eprint("File searching error. Printing Exception:")
                         eprint(error)
                   
-            os.system("rm -rf " + repo_path)
+            # os.system("rm -rf " + repo_path)
+            shutil.rmtree(path, ignore_errors=False, onerror=onerror)
      
       except GitCommandError:
             eprint("\n")
@@ -273,7 +347,21 @@ def populate_commits(cursor, conn, repo_id, type):
 
 
 def populate_discussions(cursor, conn, api, repo_name, type):
-      """ Retrieve discussion from a repo and populate discussion table """
+      """ 
+      Importation of discussions information.
+      It inserts discussion information into ``discussion``, ``author`` and ``discussion_event`` tables.
+      
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.
+      :type  conn: `connection.MySQLConnection`_
+      :param api: The huggingface_hub API object pointer.
+      :type api: `huggingface_hub.HfApi`_
+      :param repo_name: The name of the repository.
+      :type repo_name: str
+      :param type: The type of the repository (i.e., model, dataset or space) 
+      :type type: str
+      """
 
       # If discussions are disabled, it is thrown an HTTPError Exception
       try:
@@ -335,7 +423,24 @@ def populate_discussions(cursor, conn, api, repo_name, type):
 
 
 def populate_models(cursor, conn, api, lower, upper, limit_date):
-      """ importation of the full information of models """
+      """ 
+      Importation of the information of models.
+      It retrieves the whole set of models from HFH, and optionally, it slices the set using the lower and upper params. 
+      It inserts model information into ``repository``, ``model`` and ``author`` tables, and calls the populate methods to fill the remaining tables (not including ``populate_datasets`` and ``populate_spaces``).
+      
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.
+      :type conn: `connection.MySQLConnection <https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html>`_
+      :param api: The huggingface_hub API object pointer.
+      :type api: `huggingface_hub.HfApi <https://huggingface.co/docs/huggingface_hub/v0.16.3/en/package_reference/hf_api#huggingface_hub.HfApi>`_
+      :param lower: Lower bound of the slicing of the set of models
+      :type lower: int
+      :param upper: Upper bound of the slicing of the set of models
+      :type upper: int
+      :param limit_date: Date from which it starts to update the database (e.g., update the database values of the models that have been modified in the last month).
+      :type limit_date: datetime
+      """
 
       print("Retrieving full information of models...")
       # list(iter()) is a workaround until pagination is released in v0.14
@@ -408,7 +513,24 @@ def populate_models(cursor, conn, api, lower, upper, limit_date):
 
 
 def populate_datasets(cursor, conn, api, lower, upper, limit_date):
-      """ importation of dataset data """
+      """ 
+      Importation of the information of datasets.
+      It retrieves the whole set of datasets from HFH, and optionally, it slices the set using the lower and upper params. 
+      It inserts dataset information into ``repository``, ``dataset`` and ``author`` tables, and calls the populate methods to fill the remaining tables (not including ``populate_models`` and ``populate_spaces``)..
+      
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.
+      :type conn: `connection.MySQLConnection`_
+      :param api: The huggingface_hub API object pointer.
+      :type api: `huggingface_hub.HfApi`_
+      :param lower: Lower bound of the slicing of the set of datasets
+      :type lower: int
+      :param upper: Upper bound of the slicing of the set of datasets
+      :type upper: int
+      :param limit_date: Date from which it starts to update the database (e.g., update the database values of the datasets that have been modified in the last month). 
+      :type limit_date: datetime
+      """
 
       print("Retrieving information of datasets...")
 
@@ -475,7 +597,24 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
 
 
 def populate_spaces(cursor, conn, api, lower, upper, limit_date):
-      """ importation of space data """
+      """ 
+      Importation of the information of spaces.
+      It retrieves the whole set of spaces from HFH, and optionally, it slices the set using the lower and upper params. 
+      It inserts model information into ``repository`` and ``author`` tables, and calls the populate methods to fill the remaining tables (not including ``populate_models`` and ``populate_datasets``).
+      
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param conn: A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.
+      :type conn: `connection.MySQLConnection`_
+      :param api: The huggingface_hub API object pointer.
+      :type api: `huggingface_hub.HfApi`_
+      :param lower: Lower bound of the slicing of the set of spaces
+      :type lower: int
+      :param upper: Upper bound of the slicing of the set of spaces
+      :type upper: int
+      :param limit_date: Date from which it starts to update the database (e.g., update the database values of the spaces that have been modified in the last month).
+      :type limit_date: datetime
+      """
 
       print("Retrieving information of spaces...")
       hub_spaces = list(iter(api.list_spaces(full=True, use_auth_token=ACCESS_TOKEN)))
@@ -527,24 +666,30 @@ def populate_spaces(cursor, conn, api, lower, upper, limit_date):
 
 
 def main(argv):
+      """ Main method. Called when invoking the script. """
 
+      # The execution time is measured and dumped to stdout
       start_time = time.time()
 
       if len(argv) == 0:
         sys.exit(1)
 
       try:
-            opts, args = getopt.getopt(argv, "t:l:u:", [])
+            opts, args = getopt.getopt(argv, "t:l:u:db", [])
       except getopt.GetoptError:
-            eprint("Wrong usage. USAGE: python databaseImport.py -t type -l lower_index -u upper_index")
+            eprint("Wrong usage. USAGE: python databaseImport.py -t type")
             sys.exit(1)
+      
+      # Out file
+      # out=open('path')
+      # print(",",file=out)
       
       token_file = open("read_token", "r")      
       ACCESS_TOKEN = token_file.readline()
       token_file.close()
 
-      # Monthly recovery, we just need the updates of the last month
-      limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=2)) # TODO: Change to 1
+      # Monthly recovery, we just need the updates of the last month; Can be configured to N months
+      limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=1))
 
 
       lower = None
@@ -558,21 +703,27 @@ def main(argv):
                   lower = int(arg)
             if opt in ("-u"):
                   upper = int(arg)
+            if opt in ("-c"):
+                  create_schema_mysql(c)
+                  print("Database schema created!")
+
+      if type == "":
+            eprint("Wrong usage. Flag -t with argument is mandatory. USAGE: python databaseImport.py -t type")
+            sys.exit(1)
 
       conn = create_connection_mysql()
       c = conn.cursor()
       print("connection done")
 
+      # Settings to avoid formatting error when inserting text
       c.execute('SET NAMES utf8mb4')
       c.execute("SET CHARACTER SET utf8mb4")
       c.execute("SET character_set_connection=utf8mb4")
 
-      if 'db' in sys.argv:
-            create_schema_mysql(c)
 
-      print("schema created")
       api = HfApi()
 
+      # Import by type. 
       if type == "dataset":
             populate_datasets(c, conn, api, lower, upper, limit_date)
       elif type == "space":
@@ -591,9 +742,11 @@ def main(argv):
       # Just be sure any changes have been committed or they will be lost.
       conn.close()
 
+      # TODO: Workaround for skipped repos
       if type == "dataset":
             print("SKIPPED REPOS: ", SKIPPED_REPOS)
 
+      # Printing execution time...
       exec_time = time.time() - start_time
       print("\nExecution time:")
       print("--- %s seconds ---" % (exec_time))
