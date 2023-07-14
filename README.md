@@ -1,10 +1,32 @@
 # HFCommunity
 
-[HFCommunity](https://som-research.github.io/HFCommunity/) offers an offline up-to-date relational database built from the data available at the Hugging Face Hub, providing queryable data about the repositories hosted in the Hub
+HFCommunity is a dataset built via a data collection process relying on the Hugging Face Hub (HFH) API and Git. 
+
+The following figure shows the architecture of HFCommunity. As can be seen, HFCommunity is composed of two main components: 
+
+* **Dataset Extractor**. The Dataset Extractor includes extractors for the different HFH data elements (i.e., datasets, models, and spaces) and a database importer to store the extracted data. Note that the database importer follows the ![conceptual schema for HFCommunity](https://som-research.github.io/HFCommunity/diagram.html), which includes the main entities and relationships to query HFH data (e.g., model, dataset, space, issue or discussion elements).
+
+* **Website**. The Website is a web application that includes the main technical documentation of the tool and the last HFCommunity dataset dumps to be downloaded. A new release of HFCommunity is released every month.
+
+![HFCommunity Architecture](imgs/architecture.png)
+
+HFCommunity dataset is provided as a relational database, and therefore it can be queried via SQL-like languages to enable empirical analysis on ML projects.
+
+## Dataset Extractor
+
+The Dataset Extractor has been developed in Python and is in charge of importing the HFH data into the HFCommunity dataset. 
+To execute the Dataset Extractor refer to the ![docs](https://github.com/SOM-Research/HFCommunity/docs/usage.html).
+
+
+## Website
+
+The website of HFCommunity is located [here](https://som-research.github.io/HFCommunity/).
+
+The technical documentation of the tool is located [here](https://som-research.github.io/HFCommunity/docs/).
 
 # Contributing
 
-This project is being development as part of a research line of the [SOM Research Lab](https://som-research.github.io/), but we are open to contributions from the community. Any comment is welcome!
+This project is part of a research line of the [SOM Research Lab](https://som-research.github.io/), but we are open to contributions from the community. Any comment is welcome!
 
 If you are interested in contributing to this project, please read the [CONTRIBUTING.md](CONTRIBUTING.md) file.
 
@@ -14,21 +36,13 @@ At SOM Research Lab we are dedicated to creating and maintaining welcoming, incl
 
 # Governance
 
-The development and community managemente of this project follows the governance rules described in the [GOVERNANCE.md](GOVERNANCE.md) document.
-
-# Who is behind this repository
-
-We are currently a group of three researchers from the [SOM Research Lab](https://som-research.github.io/):
-
-* [Adem Ait](https://github.com/ademait/) 
-* [Javier Cánovas](https://github.com/jlcanovas/) 
-* [Jordi Cabot](https://github.com/jcabot/) 
+The development and community management of this project follows the governance rules described in the [GOVERNANCE.md](GOVERNANCE.md) document.
 
 # License
 
 This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>
 
-The [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/) license allows reusers to distribute, remix, adapt, and build upon the material in any medium or format, so long as attribution is given to the creator. The license allows for commercial use. If you remix, adapt, or build upon the material, you must license the modified material under identical terms.
+The [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/) license allows users to distribute, remix, adapt, and build upon the material in any medium or format, so long as attribution is given to the creator. The license allows for commercial use. If you remix, adapt, or build upon the material, you must license the modified material under identical terms.
 
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a>
 
