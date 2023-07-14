@@ -43,6 +43,8 @@ The keywords in this file define:
 * **pass**: Password of the user.
 * **database**: The database name. The database **must** be created before invoking the script.
 
+Furthermore, inside ``read_token`` file must be placed a Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_.
+
 Execution
 ---------------------
 
