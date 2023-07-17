@@ -80,7 +80,7 @@ def create_connection_mysql():
       except:
             eprint("Database connection failed")
             sys.exit(1)
-      return conn
+      return conn, config['database']
 
 
 def create_schema_mysql(cursor):
@@ -101,9 +101,9 @@ def create_schema_mysql(cursor):
       cursor.execute('''DROP TABLE IF EXISTS discussion''')
       cursor.execute('''DROP TABLE IF EXISTS model''')
       cursor.execute('''DROP TABLE IF EXISTS dataset''')
-      cursor.execute('''DROP TABLE IF EXISTS space''')
-      cursor.execute('''DROP TABLE IF EXISTS models_in_spaces''')
+      cursor.execute('''DROP TABLE IF EXISTS repository''')
       cursor.execute('''DROP TABLE IF EXISTS commits''')
+      cursor.execute('''DROP TABLE IF EXISTS commit_parents''')
       cursor.execute('''DROP TABLE IF EXISTS files_in_commit''')
       cursor.execute('''DROP TABLE IF EXISTS discussion_event''')
 
@@ -118,44 +118,44 @@ def create_schema_mysql(cursor):
             (name VARCHAR(256) PRIMARY KEY, avatar_url TEXT, is_pro INTEGER, fullname TEXT, type VARCHAR(64), source VARCHAR(256))
             ''')
       cursor.execute('''
+            CREATE TABLE IF NOT EXISTS repository
+            (id VARCHAR(256) PRIMARY KEY, name TEXT, type VARCHAR(7), author VARCHAR(256), sha TEXT, last_modified TEXT, private INTEGER, card_data LONGTEXT, gated INTEGER, likes INTEGER, FOREIGN KEY (author) REFERENCES author(username))
+            ''')
+      cursor.execute('''
             CREATE TABLE IF NOT EXISTS file
-            (id INTEGER PRIMARY KEY AUTO_INCREMENT, filename VARCHAR(500), repo_id VARCHAR(256), UNIQUE(filename, repo_id))
+            (id INTEGER PRIMARY KEY AUTO_INCREMENT, filename VARCHAR(500), repo_id VARCHAR(256), UNIQUE(filename, repo_id), FOREIGN KEY (repo_id) REFERENCES repository(id))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS tags_in_repo
-            (tag_name VARCHAR(256), repo_id VARCHAR(256), PRIMARY KEY(tag_name, repo_id))
+            (tag_name VARCHAR(256), repo_id VARCHAR(256), PRIMARY KEY(tag_name, repo_id), FOREIGN KEY (tag_name) REFERENCES tag(name), FOREIGN KEY (repo_id) REFERENCES repository(id))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS discussion
-            (num INTEGER, repo_id VARCHAR(256), author TEXT, title TEXT, status TEXT, created_at TEXT, is_pull_request INTEGER, PRIMARY KEY(num, repo_id))
+            (num INTEGER, repo_id VARCHAR(256), author VARCHAR(256), title TEXT, status TEXT, created_at TEXT, is_pull_request INTEGER, PRIMARY KEY(num, repo_id), FOREIGN KEY (repo_id) REFERENCES repository, FOREIGN KEY (author) REFERENCES author(username))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS model
-            (id VARCHAR(256) PRIMARY KEY, name TEXT, model_id TEXT, author TEXT, sha TEXT, last_modified TEXT, private INTEGER, pipeline_tag TEXT, downloads INTEGER, library_name TEXT, likes INTEGER, config LONGTEXT, card_data LONGTEXT, gated INTEGER)
+            (id VARCHAR(256) PRIMARY KEY, name TEXT, model_id TEXT, author VARCHAR(256), sha TEXT, last_modified TEXT, private INTEGER, pipeline_tag TEXT, downloads INTEGER, library_name TEXT, likes INTEGER, config LONGTEXT, card_data LONGTEXT, gated INTEGER FOREIGN KEY (repo_id) REFERENCES repository)
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS dataset
-            (id VARCHAR(256) PRIMARY KEY, name TEXT, author TEXT, sha TEXT, last_modified TEXT, private INTEGER, gated INTEGER, citation TEXT, description TEXT, downloads INTEGER, likes INTEGER, card_data LONGTEXT, paperswithcode_id TEXT)
-            ''')
-      cursor.execute('''
-            CREATE TABLE IF NOT EXISTS space
-            (id VARCHAR(256) PRIMARY KEY, name TEXT, author TEXT, sha TEXT, last_modified TEXT, private INTEGER, card_data LONGTEXT, gated INTEGER)
-            ''')
-      cursor.execute('''
-            CREATE TABLE IF NOT EXISTS models_in_spaces
-            (model_id VARCHAR(256), space_id VARCHAR(256), PRIMARY KEY(model_id, space_id))
+            (id VARCHAR(256) PRIMARY KEY, name TEXT, author VARCHAR(256), sha TEXT, last_modified TEXT, private INTEGER, gated INTEGER, citation TEXT, description TEXT, downloads INTEGER, likes INTEGER, card_data LONGTEXT, paperswithcode_id TEXT FOREIGN KEY (repo_id) REFERENCES repository)
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS commits
-            (sha VARCHAR(256) PRIMARY KEY, timestamp TEXT, message TEXT, author TEXT)
+            (sha VARCHAR(256) PRIMARY KEY, timestamp TEXT, message TEXT, author VARCHAR(256), FOREIGN KEY (author) REFERENCES author(username))
+            ''')
+      cursor.execute('''
+            CREATE TABLE IF NOT EXISTS commit_parents
+            (commit_sha VARCHAR(256), parent_sha VARCHAR(256), PRIMARY KEY(commit_sha, parent_sha), FOREIGN KEY (commit_sha) REFERENCES commits(sha), FOREIGN KEY (parent_sha) REFERENCES commits(sha))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS files_in_commit
-            (sha VARCHAR(256), file_id INTEGER, PRIMARY KEY(sha, file_id))
+            (sha VARCHAR(256), file_id INTEGER, PRIMARY KEY(sha, file_id), FOREIGN KEY (sha) REFERENCES commits(sha), FOREIGN KEY (file_id) REFERENCES file(id))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS discussion_event
-            (id VARCHAR(256) PRIMARY KEY, repo_id VARCHAR(256), discussion_num INTEGER,  type VARCHAR(64), created_at TEXT, author TEXT, content TEXT, edited INTEGER, hidden INTEGER, new_status TEXT, summary TEXT, sha TEXT, old_title TEXT, new_title TEXT, full_data LONGTEXT)
+            (id VARCHAR(256) PRIMARY KEY, repo_id VARCHAR(256), discussion_num INTEGER,  type VARCHAR(64), created_at TEXT, author VARCHAR(256), content TEXT, edited INTEGER, hidden INTEGER, new_status TEXT, summary TEXT, sha TEXT, old_title TEXT, new_title TEXT, full_data LONGTEXT, FOREIGN KEY (sha) REFERENCES commits(sha), FOREIGN KEY (author) REFERENCES author(username), FOREIGN KEY (discussion_num, repo_id) REFERENCES discussion(num, repo_id))
             ''')
 
       print("Tables created!")
@@ -677,7 +677,7 @@ def main(argv):
       try:
             opts, args = getopt.getopt(argv, "t:l:u:c", [])
       except getopt.GetoptError:
-            eprint("Wrong usage. USAGE: python databaseImport.py -t type")
+            eprint("Wrong usage. USAGE: python databaseImport.py [-c] [-t type] [-l lower_index] [-u upper_index]")
             sys.exit(1)
       
       # Out file
@@ -695,6 +695,11 @@ def main(argv):
       lower = None
       upper = None
       type = ""
+
+      conn, database = create_connection_mysql()
+
+      c = conn.cursor()
+      print("connection done")
       
       for opt, arg in opts:
             if opt in ("-t"):
@@ -707,14 +712,35 @@ def main(argv):
                   create_schema_mysql(c)
                   print("Database schema created!")
 
-      conn = create_connection_mysql()
-      c = conn.cursor()
-      print("connection done")
 
       # Settings to avoid formatting error when inserting text
       c.execute('SET NAMES utf8mb4')
       c.execute("SET CHARACTER SET utf8mb4")
       c.execute("SET character_set_connection=utf8mb4")
+
+      def check_database_schema(cursor, database):
+            """
+            Auxiliar function to check if all the tables required are in the database.
+            
+            :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+            :type cursor: `cursor.MySQLCursor`_
+            :param database: MariaDB database name.
+            :type database: str
+            """
+            cursor.execute("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s", [database])
+            db_tables = list(map(lambda x: x[0], cursor.fetchall()))
+            
+            hf_tables = ["author", "commit_parents", "commits", "dataset", "discussion", "discussion_event", "file", "files_in_commit", "model", "repository", "tag", "tags_in_repo"]
+            
+            return set(hf_tables).issubset(db_tables)
+      
+      tables_exist = check_database_schema(c, database)
+
+      if not tables_exist:
+            eprint("There are some (or all) tables required missing in the target database.\nPlease, if the tables are not created following the HFCommunity schema use the -c flag.\nUSAGE: python databaseImport.py -c [-t type]")
+            sys.exit(1)
+      
+      exit(1)
 
 
       api = HfApi()
