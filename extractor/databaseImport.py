@@ -707,10 +707,6 @@ def main(argv):
                   create_schema_mysql(c)
                   print("Database schema created!")
 
-      if type == "":
-            eprint("Wrong usage. Flag -t with argument is mandatory. USAGE: python databaseImport.py -t type")
-            sys.exit(1)
-
       conn = create_connection_mysql()
       c = conn.cursor()
       print("connection done")
