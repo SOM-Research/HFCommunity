@@ -675,7 +675,7 @@ def main(argv):
         sys.exit(1)
 
       try:
-            opts, args = getopt.getopt(argv, "t:l:u:db", [])
+            opts, args = getopt.getopt(argv, "t:l:u:c", [])
       except getopt.GetoptError:
             eprint("Wrong usage. USAGE: python databaseImport.py -t type")
             sys.exit(1)
