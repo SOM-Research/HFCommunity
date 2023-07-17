@@ -4,7 +4,7 @@ HFCommunity is a dataset built via a data collection process relying on the Hugg
 
 The following figure shows the architecture of HFCommunity. As can be seen, HFCommunity is composed of two main components: 
 
-* **Dataset Extractor**. The Dataset Extractor includes extractors for the different HFH data elements (i.e., datasets, models, and spaces) and a database importer to store the extracted data. Note that the database importer follows the ![conceptual schema for HFCommunity](https://som-research.github.io/HFCommunity/diagram.html), which includes the main entities and relationships to query HFH data (e.g., model, dataset, space, issue or discussion elements).
+* **Dataset Extractor**. The Dataset Extractor includes extractors for the different HFH data elements (i.e., datasets, models, and spaces) and a database importer to store the extracted data. Note that the database importer follows the [conceptual schema for HFCommunity](https://som-research.github.io/HFCommunity/diagram.html), which includes the main entities and relationships to query HFH data (e.g., model, dataset, space, issue or discussion elements).
 
 * **Website**. The Website is a web application that includes the main technical documentation of the tool and the last HFCommunity dataset dumps to be downloaded. A new release of HFCommunity is released every month.
 
@@ -15,7 +15,7 @@ HFCommunity dataset is provided as a relational database, and therefore it can b
 ## Dataset Extractor
 
 The Dataset Extractor has been developed in Python and is in charge of importing the HFH data into the HFCommunity dataset. 
-To execute the Dataset Extractor refer to the ![docs](https://som-research.github.io/HFCommunity/docs/usage.html).
+To execute the Dataset Extractor refer to the [docs](https://som-research.github.io/HFCommunity/docs/usage.html).
 
 
 ## Website
