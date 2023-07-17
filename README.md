@@ -15,7 +15,7 @@ HFCommunity dataset is provided as a relational database, and therefore it can b
 ## Dataset Extractor
 
 The Dataset Extractor has been developed in Python and is in charge of importing the HFH data into the HFCommunity dataset. 
-To execute the Dataset Extractor refer to the ![docs](https://github.com/SOM-Research/HFCommunity/docs/usage.html).
+To execute the Dataset Extractor refer to the ![docs](https://som-research.github.io/HFCommunity/docs/usage.html).
 
 
 ## Website
@@ -26,7 +26,7 @@ The technical documentation of the tool is located [here](https://som-research.g
 
 # Contributing
 
-This project is part of a research line of the [SOM Research Lab](https://som-research.github.io/), but we are open to contributions from the community. Any comment is welcome!
+This project is part of a research line of the [SOM Research Lab](https://som-research.uoc.edu/), but we are open to contributions from the community. Any comment is welcome!
 
 If you are interested in contributing to this project, please read the [CONTRIBUTING.md](CONTRIBUTING.md) file.
 
