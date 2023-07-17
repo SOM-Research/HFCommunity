@@ -730,7 +730,7 @@ def main(argv):
             populate_spaces(c, conn, api, lower, upper, limit_date)
       elif type == "model":
             populate_models(c, conn, api, lower, upper, limit_date)
-      elif type == "all":
+      else:
             populate_datasets(c, conn, api, lower, upper, limit_date)
             populate_spaces(c, conn, api, lower, upper, limit_date)
             populate_models(c, conn, api, lower, upper, limit_date)
