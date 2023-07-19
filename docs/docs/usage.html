@@ -115,6 +115,7 @@ The file follows a JSON structure, and must be defined as:</p>
 <span class="w">    </span><span class="nt">&quot;pass&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;psswd&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;database&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;db_name&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;hfh_token&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;token&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;last_n_months&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="c1">// optional</span>
 <span class="w">    </span><span class="nt">&quot;num_commits&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="c1">// optional</span>
 <span class="w">    </span><span class="nt">&quot;num_files&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="c1">// optional</span>
 <span class="p">}</span>
@@ -128,6 +129,7 @@ The file follows a JSON structure, and must be defined as:</p>
 <li><p><strong>pass</strong>: Password of the user.</p></li>
 <li><p><strong>database</strong>: The database name. The database <strong>must</strong> be created before invoking the script.</p></li>
 <li><p><strong>hfh_token</strong>: The Hugging Face Hub <a class="reference external" href="https://huggingface.co/docs/hub/security-tokens">API token</a>.</p></li>
+<li><p><strong>last_n_months</strong>: Number of months from which it is wanted to fully update the repositories. It fully updates the repositories modified within the last <code class="docutils literal notranslate"><span class="pre">last_n_months</span></code>. The rest of repositories only gets its downloads and likes updated. Intended for executions after the first time.</p></li>
 <li><p><strong>num_commits</strong>: Constant which tells the process the threshold for not retrieving repositories with more than <code class="docutils literal notranslate"><span class="pre">num_commits</span></code> number of files commits. This is intended for machines with lower resources.</p></li>
 <li><p><strong>num_files</strong>: Constant which tells the process the threshold for not retrieving repositories with more than <code class="docutils literal notranslate"><span class="pre">num_files</span></code> number of files. This is intended for machines with lower resources.</p></li>
 </ul>
@@ -187,11 +189,11 @@ The script will print to stdout the repositories skipped and the total number of
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span>model<span class="w"> </span>-u<span class="w"> </span><span class="m">100</span>
 </pre></div>
 </div>
-<p><a href="#id1"><span class="problematic" id="id2">*</span></a>”I want to retrieve all repositories of HFH, but skip those above the threshold.”</p>
+<p><em>“I want to retrieve all repositories of HFH, but skip those above the threshold.”</em></p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span>all<span class="w"> </span>-s
 </pre></div>
 </div>
-<p><a href="#id3"><span class="problematic" id="id4">*</span></a>”I want to retrieve the 50 least recent modified spaces, but skip those above the threshold.”</p>
+<p><em>“I want to retrieve the 50 least recent modified spaces, but skip those above the threshold.”</em></p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span>space<span class="w"> </span>-l<span class="w"> </span>-50<span class="w"> </span>-s
 </pre></div>
 </div>
@@ -209,7 +211,7 @@ The script will print to stdout the repositories skipped and the total number of
 
   <hr/>
 
-  
+
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>

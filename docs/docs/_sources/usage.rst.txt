@@ -37,6 +37,7 @@ The file follows a JSON structure, and must be defined as:
         "pass" : "psswd",
         "database" : "db_name",
         "hfh_token" : "token",
+        "last_n_months" : 0, // optional
         "num_commits" : 0, // optional
         "num_files" : 0 // optional
     }
@@ -49,6 +50,7 @@ The keywords in this file define:
 * **pass**: Password of the user.
 * **database**: The database name. The database **must** be created before invoking the script.
 * **hfh_token**: The Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_.
+* **last_n_months**: Number of months from which it is wanted to fully update the repositories. It fully updates the repositories modified within the last ``last_n_months``. The rest of repositories only gets its downloads and likes updated. Intended for executions after the first time. 
 * **num_commits**: Constant which tells the process the threshold for not retrieving repositories with more than ``num_commits`` number of files commits. This is intended for machines with lower resources.
 * **num_files**: Constant which tells the process the threshold for not retrieving repositories with more than ``num_files`` number of files. This is intended for machines with lower resources.
 
@@ -117,13 +119,13 @@ To have a clear idea of how to execute the script, we present some examples in t
 
     $ python databaseImport.py -t model -u 100
 
-*"I want to retrieve all repositories of HFH, but skip those above the threshold."
+*"I want to retrieve all repositories of HFH, but skip those above the threshold."*
 
 .. code-block:: console
 
     $ python databaseImport.py -t all -s
 
-*"I want to retrieve the 50 least recent modified spaces, but skip those above the threshold."
+*"I want to retrieve the 50 least recent modified spaces, but skip those above the threshold."*
 
 .. code-block:: console
 

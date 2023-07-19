@@ -218,7 +218,7 @@
 <span class="sd">      Database configuration file must be located in the path as a JSON file called `hfc.config`.</span>
 
 <span class="sd">      :return: Tuple containing the MySQL connector to the database specified in the configuration file and the database name.</span>
-<span class="sd">      :rtype: (`connection.MySQLConnection`_, str) # TODO: CHECK tuple return</span>
+<span class="sd">      :rtype: (`connection.MySQLConnection`_, str)</span>
 <span class="sd">      &quot;&quot;&quot;</span>
 
       <span class="n">conn</span> <span class="o">=</span> <span class="kc">None</span>
@@ -606,15 +606,15 @@
       <span class="c1"># Apply sort to get the most recent repos (in descending order; direction = -1); Sort just returns 10k repos, use sorted method instead</span>
       <span class="n">hub_models</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_models</span><span class="p">(</span><span class="n">full</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cardData</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fetch_config</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_auth_token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">)))</span>
       <span class="n">models</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hub_models</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hub_models</span><span class="p">),</span> <span class="s2">&quot;models&quot;</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">),</span> <span class="s2">&quot;models&quot;</span><span class="p">)</span>
       
       <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting population into database...&quot;</span><span class="p">)</span>
 
       <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
 
-      <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">check_negative_indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hub_models</span><span class="p">),</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
+      <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">check_negative_indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">),</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
 
-      <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">hub_models</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
+      <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
             
             <span class="n">model_id</span> <span class="o">=</span> <span class="s2">&quot;models/&quot;</span> <span class="o">+</span> <span class="n">model</span><span class="o">.</span><span class="n">id</span>
 
@@ -697,11 +697,11 @@
       <span class="n">hub_datasets</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_datasets</span><span class="p">(</span><span class="n">full</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_auth_token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">)))</span>
       <span class="n">datasets</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hub_datasets</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hub_datasets</span><span class="p">),</span> <span class="s2">&quot;datasets&quot;</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">),</span> <span class="s2">&quot;datasets&quot;</span><span class="p">)</span>
 
       <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
 
-      <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">check_negative_indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hub_datasets</span><span class="p">),</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
+      <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">check_negative_indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">),</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
 
       <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
 
@@ -781,11 +781,11 @@
       <span class="n">hub_spaces</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_spaces</span><span class="p">(</span><span class="n">full</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_auth_token</span><span class="o">=</span><span class="n">ACCESS_TOKEN</span><span class="p">)))</span>
       <span class="n">spaces</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hub_spaces</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;lastModified&quot;</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hub_spaces</span><span class="p">),</span> <span class="s2">&quot;spaces&quot;</span><span class="p">)</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info retrieved! Gathered&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">spaces</span><span class="p">),</span> <span class="s2">&quot;spaces&quot;</span><span class="p">)</span>
 
       <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
       
-      <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">check_negative_indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hub_spaces</span><span class="p">),</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
+      <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">check_negative_indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">spaces</span><span class="p">),</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
 
       <span class="k">for</span> <span class="n">space</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">spaces</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
             
@@ -847,7 +847,7 @@
       <span class="n">config</span> <span class="o">=</span> <span class="n">read_config</span><span class="p">()</span>
 
       <span class="k">try</span><span class="p">:</span>
-            <span class="n">ACCESS_TOKEN</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;hfh_token&quot;</span><span class="p">]</span> <span class="c1"># TODO: Validate token</span>
+            <span class="n">ACCESS_TOKEN</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;hfh_token&quot;</span><span class="p">]</span>
       <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">ke</span><span class="p">:</span>
             <span class="n">eprint</span><span class="p">(</span><span class="s2">&quot;Missing token in hfc.config file. Please add token in &#39;hfh_token&#39; field.&quot;</span><span class="p">)</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -856,8 +856,14 @@
       <span class="n">status_code</span> <span class="o">=</span> <span class="n">validate_token</span><span class="p">(</span><span class="n">ACCESS_TOKEN</span><span class="p">)</span>
       
       
-      <span class="c1"># Monthly recovery, we just need the updates of the last month; Can be configured to N months</span>
-      <span class="n">limit_date</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">UTC</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">dateutil</span><span class="o">.</span><span class="n">relativedelta</span><span class="o">.</span><span class="n">relativedelta</span><span class="p">(</span><span class="n">months</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+      <span class="c1"># Monthly recovery. NOT BY DEFAULT.</span>
+      <span class="c1"># Default date (Jan 1st 1970 - UNIX epoch time)</span>
+      <span class="n">limit_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+      <span class="k">try</span><span class="p">:</span>
+            <span class="n">last_n_months</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;last_n_months&quot;</span><span class="p">]</span>
+            <span class="n">limit_date</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">UTC</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">dateutil</span><span class="o">.</span><span class="n">relativedelta</span><span class="o">.</span><span class="n">relativedelta</span><span class="p">(</span><span class="n">months</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+      <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">ke</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Missing n_last_month parameter in hfc.config file. Retrieving all information!&quot;</span><span class="p">)</span>
 
 
       <span class="n">lower</span> <span class="o">=</span> <span class="mi">0</span>
@@ -934,7 +940,7 @@
       <span class="c1"># Just be sure any changes have been committed or they will be lost.</span>
       <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-      <span class="c1"># TODO: Workaround for skipped repos</span>
+      
       <span class="k">if</span> <span class="n">skip</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;SKIPPED REPOS: &quot;</span><span class="p">,</span> <span class="n">SKIPPED_REPOS</span><span class="p">)</span>
 

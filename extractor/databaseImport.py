@@ -557,7 +557,7 @@ def populate_models(cursor, conn, api, lower, upper, limit_date):
             
             i += 1
 
-            # TODO: Throwing PyDriller exception; catch that
+            # TODO: Do workaround
             if model.__dict__.get("id") in ["AmirHussein/icefall-asr-mgb2-conformer_ctc-2022-27-06", "datablations/lm1-misc","tktkdrrrrrrrrrrr/CivitAI_model_info"]:
                   continue
 
@@ -645,7 +645,7 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
 
             i += 1
             
-            # TODO: This repo is huge, it is needed a workaround when collecting the commits;
+            # This repo is huge, it is needed a workaround when collecting the commits;
             if dataset.__dict__.get("id") in ["ywchoi/mdpi_sept10", "ACL-OCL/acl-anthology-corpus", "uripper/ProductScreenshots", "gozfarb/ShareGPT_Vicuna_unfiltered","deepsynthbody/deepfake_ecg_full_train_validation_test"]:
                   continue
 
@@ -655,6 +655,7 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
                   ''', (dataset.author, "hf_owner"))
                   conn.commit()
 
+            # 2023-03-16T20:10:19.000Z
             last_modified = datetime.strptime(dataset.__dict__.get("lastModified"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S")
             # TODO: Change gated to String
             cursor.execute('''
@@ -723,7 +724,7 @@ def populate_spaces(cursor, conn, api, lower, upper, limit_date):
             
             i += 1
 
-            # TODO: This repo always give error with PyDriller, we'll have to take a look -> in web ERROR in deploying
+            # This repo always give error with PyDriller, we'll have to take a look -> in web ERROR in deploying
             if space.__dict__.get("id") in ["mfrashad/ClothingGAN", "mfrashad/CharacterGAN", "fdfdd12345628/Tainan", "patent/demo1"]:
                   continue
             
@@ -760,10 +761,10 @@ def main(argv):
             sys.exit(1)
 
       try:
-            opts, args = getopt.getopt(argv, "t:l:u:cs", []) # The most used in python is argparse (instead of getopt)
+            opts, args = getopt.getopt(argv, "t:l:u:cs", []) # TODO: Refactor. Use argparse
       except getopt.GetoptError:
             eprint("USAGE: python databaseImport.py -c")
-            eprint("       python databaseImport.py -t {model|dataset|space|all} [-l lower_index] [-u upper_index] [-s]")
+            eprint("       python databaseImport.py -t [model|dataset|space|all] [-l lower_index] [-u upper_index] [-s]")
             sys.exit(1)
       
       config = read_config()
@@ -775,11 +776,17 @@ def main(argv):
             sys.exit(1)
 
 
-      status_code = validate_token(ACCESS_TOKEN)
+      validate_token(ACCESS_TOKEN)
       
       
-      # Monthly recovery, we just need the updates of the last month; Can be configured to N months
-      limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=1))
+      # Monthly recovery. NOT BY DEFAULT.
+      # Default date (Jan 1st 1970 - UNIX epoch time)
+      limit_date = datetime.fromtimestamp(0)
+      try:
+            last_n_months = config["last_n_months"]
+            limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=last_n_months))
+      except KeyError as ke:
+            print("Missing n_last_month parameter in hfc.config file. Retrieving all information!")
 
 
       lower = 0
@@ -813,9 +820,6 @@ def main(argv):
                   global NUM_FILES
                   NUM_FILES = config['num_files']
 
-      # Monthly recovery, we just need the updates of the last month; Can be configured to N months
-      limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=1))
-
 
       # Settings to avoid formatting error when inserting text
       c.execute("SET NAMES utf8mb4")
@@ -846,7 +850,7 @@ def main(argv):
             populate_models(c, conn, api, lower, upper, limit_date)
       else:
             print("USAGE: python databaseImport.py -c")
-            print("       python databaseImport.py -t {model|dataset|space|all} [-l lower_index] [-u upper_index] [-s]")
+            print("       python databaseImport.py -t [model|dataset|space|all] [-l lower_index] [-u upper_index] [-s]")
             sys.exit(0)
 
       # Save (commit) the changes
