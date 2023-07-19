@@ -8,7 +8,7 @@
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
-    <link rel="icon" type="image/x-icon" href="_static/readthedocs_favicon.png?"/>
+    <link rel="shortcut icon" href="_static/readthedocs_favicon.png"/>
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -52,7 +52,10 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#execution">Execution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execution">Execution</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#execution-examples">Execution examples</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="support.html">Support</a></li>
@@ -100,14 +103,20 @@ At the command line (with pip installed):</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading"></a></h2>
-<p>Before invoking the <code class="docutils literal notranslate"><span class="pre">databaseImport</span></code> script, it is necessary to fill (or create) the <code class="docutils literal notranslate"><span class="pre">db.config</span></code> file, in the same folder the script is located.
+<p>Before invoking the <code class="docutils literal notranslate"><span class="pre">databaseImport</span></code> script, it is necessary to fill (or create) the <code class="docutils literal notranslate"><span class="pre">hfc.config</span></code> file, in the same folder the script is located.
+Besides the mandatory fields, there are two optional parameters to configure a threshold for low resource machines.
+The retrieval of large repositories (often found in HFH dataset repositories), may consume too much resources and force the script to stop.
+These thresholds are not exclusive, and can it be used any combination of them.
 The file follows a JSON structure, and must be defined as:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;host&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hostname&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;port&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0000</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;user&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;pass&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;psswd&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;database&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;db_name&quot;</span>
+<span class="w">    </span><span class="nt">&quot;database&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;db_name&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;hfh_token&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;token&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;num_commits&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="c1">// optional</span>
+<span class="w">    </span><span class="nt">&quot;num_files&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="c1">// optional</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -118,36 +127,75 @@ The file follows a JSON structure, and must be defined as:</p>
 <li><p><strong>user</strong>: User to acces the MariaDB database (there is a default user as <code class="docutils literal notranslate"><span class="pre">&quot;root&quot;</span></code>).</p></li>
 <li><p><strong>pass</strong>: Password of the user.</p></li>
 <li><p><strong>database</strong>: The database name. The database <strong>must</strong> be created before invoking the script.</p></li>
+<li><p><strong>hfh_token</strong>: The Hugging Face Hub <a class="reference external" href="https://huggingface.co/docs/hub/security-tokens">API token</a>.</p></li>
+<li><p><strong>num_commits</strong>: Constant which tells the process the threshold for not retrieving repositories with more than <code class="docutils literal notranslate"><span class="pre">num_commits</span></code> number of files commits. This is intended for machines with lower resources.</p></li>
+<li><p><strong>num_files</strong>: Constant which tells the process the threshold for not retrieving repositories with more than <code class="docutils literal notranslate"><span class="pre">num_files</span></code> number of files. This is intended for machines with lower resources.</p></li>
 </ul>
-<p>Furthermore, inside <code class="docutils literal notranslate"><span class="pre">read_token</span></code> file must be placed a Hugging Face Hub <a class="reference external" href="https://huggingface.co/docs/hub/security-tokens">API token</a>.</p>
+<p>The recommended values for <code class="docutils literal notranslate"><span class="pre">num_commits</span></code> and <code class="docutils literal notranslate"><span class="pre">num_files</span></code> are 1,500 and 10,000, respectivelly.
+This must be configured according to the machine available resources.
+If the script is being used for testing purposes, these values can be lowered.</p>
 </section>
 <section id="execution">
 <h2>Execution<a class="headerlink" href="#execution" title="Permalink to this heading"></a></h2>
 <p>Once installed the dependencies and libraries, the <code class="docutils literal notranslate"><span class="pre">databaseImport</span></code> script can be executed as follows:</p>
-<ol class="arabic simple">
+<ol class="arabic">
 <li><p>Clone this repository.</p></li>
-<li><p>Edit the <code class="docutils literal notranslate"><span class="pre">db.config</span></code> file according to your configuration.</p></li>
-<li><p>Launch the extractor via command line. The extract admits several parameters:</p></li>
-</ol>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span><span class="nb">type</span><span class="w"> </span>-l<span class="w"> </span>lower_index<span class="w"> </span>-u<span class="w"> </span>upper_index<span class="w"> </span>-c
+<li><p>Edit the <code class="docutils literal notranslate"><span class="pre">hfc.config</span></code> file according to your configuration.</p></li>
+<li><p>Launch the extractor via command line (if the database schema is not created, it will be created automatically). The extract admits several parameters:</p>
+<blockquote>
+<div><div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span><span class="o">{</span>model<span class="p">|</span>dataset<span class="p">|</span>space<span class="p">|</span>all<span class="o">}</span><span class="w"> </span><span class="o">[</span>-l<span class="w"> </span>lower_index<span class="o">]</span><span class="w"> </span><span class="o">[</span>-u<span class="w"> </span>upper_index<span class="o">]</span><span class="w"> </span><span class="o">[</span>-s<span class="o">]</span>
 </pre></div>
 </div>
+</div></blockquote>
+</li>
+<li><p>Furthermore, the script can be used to only generate the required database schema (see <a class="reference external" href="https://som-research.github.io/HFCommunity/download.html#er_diagram">ER diagram</a>). Execute the script with the following flag:</p>
+<blockquote>
+<div><div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-c
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ol>
 <dl class="simple">
-<dt>python databaseImport.py -t &lt;type&gt;</dt><dd><p>It imports only a type of repositories (<code class="docutils literal notranslate"><span class="pre">type</span></code> must be either <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">dataset</span></code> or <code class="docutils literal notranslate"><span class="pre">space</span></code>, or <code class="docutils literal notranslate"><span class="pre">all</span></code> if any type).
-This flag is mandatory,</p>
-</dd>
-<dt>python databaseImport.py -l &lt;index&gt;</dt><dd><p>It selects the repositories above the <code class="docutils literal notranslate"><span class="pre">index</span></code> from the repositories retrieved of HFH.
-This is intended to be used when we want to populate a reduced version of the HFC database.
-Note that the slicing is done by the order of the retrieved repositories, thus doing a random selection of these.</p>
-</dd>
-<dt>python databaseImport.py -u &lt;index&gt;</dt><dd><p>It selects the repositories below the <code class="docutils literal notranslate"><span class="pre">index</span></code> from the repositories retrieved of HFH.
-This is intended to be used when we want to populate a reduced version of the HFC database.
-Note that the slicing is done by the order of the retrieved repositories, thus doing a random selection of these.</p>
-</dd>
 <dt>python databaseImport.py -c</dt><dd><p>It creates the database schema of HFC database (see <a class="reference external" href="https://som-research.github.io/HFCommunity/download.html#er_diagram">ER diagram</a>).
-Intended to use in the first importation (the database specified in the <code class="docutils literal notranslate"><span class="pre">config.db</span></code> file must be created before).</p>
+Intended to use in the first importation (the database specified in the <code class="docutils literal notranslate"><span class="pre">hfc.config</span></code> file must be created before).
+It only creates the database schema, it doesn’t import the data!</p>
+</dd>
+<dt>python databaseImport.py -t &lt;type&gt;</dt><dd><p>It imports only a type of repositories (<code class="docutils literal notranslate"><span class="pre">type</span></code> must be either <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">dataset</span></code> or <code class="docutils literal notranslate"><span class="pre">space</span></code>, or <code class="docutils literal notranslate"><span class="pre">all</span></code> if any type).
+This flag is mandatory, and it indicates which type of repositories will import the script.
+If it is wanted to import all repositories (not recommended because of time and resource consumption) use the <code class="docutils literal notranslate"><span class="pre">all</span></code> argument.</p>
+</dd>
+<dt>python databaseImport.py -l &lt;l_index&gt; -u &lt;u_index&gt;</dt><dd><p>The repositories are retrieved in a list, sorted (descending) by its last modification date (the most recent are in lower indices).
+If it is wanted to import just a subset of these, indices will slice the list.
+Then, from all repositories it selects the repositories above the <code class="docutils literal notranslate"><span class="pre">l_index</span></code> and below <code class="docutils literal notranslate"><span class="pre">u_index</span></code> from the repositories retrieved of HFH.
+Note that it is not necessary to specify both, it can only be defined the lower index, which would mean that the upper index will default to the last element of the list, and viceversa.
+This is intended to be used when we want to populate a reduced version of the HFC database.
+Furthermore, indices can also be negative and will start counting form the end.
+<strong>Note</strong> that if the indices exceed the size of the list it will terminate the process to adjust the indices (it is printed the length of the list in stdout, to adjust the indices in the second execution).
+If the indices are positive but exceed the size of the list, it will end without forcing, but it won’t import anything.</p>
+</dd>
+<dt>python databaseImport.py -s</dt><dd><p>The importation of dataset and model repositories may consume excessive resources in some case.
+When this flag is activated, the script will read the <code class="docutils literal notranslate"><span class="pre">num_commits</span></code> and <code class="docutils literal notranslate"><span class="pre">num_files</span></code> parameters of the <code class="docutils literal notranslate"><span class="pre">hfc.config</span></code> file, and skip repositories having more than one of these threshold (each parameter represents a threshold and they are evaluated independently).
+It is not necessary to specifiy both.
+The script will print to stdout the repositories skipped and the total number of skipped repositories at the end.</p>
 </dd>
 </dl>
+<section id="execution-examples">
+<h3>Execution examples<a class="headerlink" href="#execution-examples" title="Permalink to this heading"></a></h3>
+<p>To have a clear idea of how to execute the script, we present some examples in the following:</p>
+<p><em>“I want to retrieve the 100 most recent modified models.”</em></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span>model<span class="w"> </span>-u<span class="w"> </span><span class="m">100</span>
+</pre></div>
+</div>
+<p><a href="#id1"><span class="problematic" id="id2">*</span></a>”I want to retrieve all repositories of HFH, but skip those above the threshold.”</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span>all<span class="w"> </span>-s
+</pre></div>
+</div>
+<p><a href="#id3"><span class="problematic" id="id4">*</span></a>”I want to retrieve the 50 least recent modified spaces, but skip those above the threshold.”</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>databaseImport.py<span class="w"> </span>-t<span class="w"> </span>space<span class="w"> </span>-l<span class="w"> </span>-50<span class="w"> </span>-s
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 
@@ -160,6 +208,8 @@ Intended to use in the first importation (the database specified in the <code cl
     </div>
 
   <hr/>
+
+  
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>

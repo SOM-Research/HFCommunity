@@ -17,10 +17,13 @@ from datetime import datetime
 from dateutil.parser import parse
 import dateutil.relativedelta
 import pytz
+import requests
 
 
 ACCESS_TOKEN = ''
 SKIPPED_REPOS = 0
+NUM_COMMITS = -1
+NUM_FILES = -1
 
 # AUXILIARY FUNCTIONS
 def eprint(*args, **kwargs):
@@ -28,6 +31,7 @@ def eprint(*args, **kwargs):
       Auxiliar function to print errors to stderr.
       """
       print(*args, file=sys.stderr, **kwargs)
+
 
 def onerror(func, path, exc_info):
     """
@@ -49,31 +53,99 @@ def onerror(func, path, exc_info):
         raise
 
 
+def check_database_schema(cursor, database):
+      """
+      Auxiliar function to check if all the tables required are in the database.
+      
+      :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
+      :type cursor: `cursor.MySQLCursor`_
+      :param database: MariaDB database name.
+      :type database: str
+      """
+      cursor.execute("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s", [database])
+      db_tables = list(map(lambda x: x[0], cursor.fetchall()))
+      
+      hf_tables = ["author", "commit_parents", "commits", "dataset", "discussion", "discussion_event", "file", "files_in_commit", "model", "repository", "tag", "tags_in_repo"]
+      
+      return set(hf_tables).issubset(db_tables)
+
+
+def read_config():
+      """
+      Function that retrieves configuration JSON from hfc.config.
+      
+      :returns config: JSON object containing all configuration parameters.
+      :rtype: JSON
+      """
+      if os.path.exists('hfc.config'):
+            with open('hfc.config') as hfc:
+                  config = json.load(hfc)
+      else:
+            eprint('hfc.config file not found!')
+            sys.exit(1)
+      return config
+
+
+def check_negative_indices(list_len, l_index, u_index):
+            """
+            Auxiliar function to check whether the negative indices used to slice the retrieved repositories list, are adjusted to its length.
+
+            :param int list_len: Length of the retrieved repositories list.
+            :param int l_index: Lower index.
+            :param int u_index: Upper index.
+            :returns: A tuple of the lower and upper index adjusted to the list index.
+            :rtype: (int, int)
+            """
+            
+            if l_index is not None and l_index < 0:
+                  l_index = list_len + l_index
+                  if l_index < 0 or (u_index is not None and u_index < l_index):
+                        eprint("Negative lower index is too big!")
+                        sys.exit(1)
+
+            if u_index is not None and u_index < 0:
+                  u_index = list_len + u_index
+                  if u_index < 0 or (l_index is not None and u_index < l_index):
+                        eprint("Negative upper index is too big!")
+                        sys.exit(1)
+            
+            return l_index, u_index
+
+
+def validate_token(token):
+            """
+            Auxiliar function to validate the token placed in hfc.config.
+
+            :param str token: Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_
+            """
+            url = "https://huggingface.co/api/whoami-v2"
+            bearer_token = "Bearer " + token
+            headers = {"Authorization": bearer_token}
+            response = requests.get(url, headers=headers)
+            status_code = response.status_code
+
+            if status_code != 200:
+                  if status_code == 401:
+                        eprint("HFH token is incorrect, please place a valid HFH token in the 'hfh_token' parameter of the hfc.config file.")
+                        sys.exit(1)
+                  else:
+                        eprint("Verification of HFH token. Return HTTP status code for whoami endpoint:" + str(status_code))
+                        eprint("Please place a valid HFH token in the 'hfh_token' parameter of the hfc.config file.")
+                        sys.exit(1)
+            
+
 # DB CONFIGURATION
 def create_connection_mysql():
       """ 
       Configures a database connection to a MySQL/MariaDB database.
-      Database configuration file must be located in the path as a JSON file called `db.config`.
+      Database configuration file must be located in the path as a JSON file called `hfc.config`.
 
-      :return: The MySQL connector to the database specified in the configuration file.
-      :rtype: `connection.MySQLConnection`_
+      :return: Tuple containing the MySQL connector to the database specified in the configuration file and the database name.
+      :rtype: (`connection.MySQLConnection`_, str)
       """
 
-      # TODO: ... config file with the following structure:
-      # {
-      #       "host" : HOST,
-      #       "port" : PORT,
-      #       "user" : USER,
-      #       "pass" : PASS,
-      #       "database" : SCHEMANAME
-      # }
-
       conn = None
-      if os.path.exists('db.config'):
-            config = json.load(open('db.config'))
-      else:
-            eprint('db.config file not found!')
-            sys.exit(1)
+      config = read_config()
       
       try :
             conn = mysql.connector.connect(user=config['user'], password=config['pass'], host=config['host'], port=config['port'], database=config['database'])  
@@ -93,19 +165,22 @@ def create_schema_mysql(cursor):
 
       print("Deleting tables...")
       
-      cursor.execute('''DROP TABLE IF EXISTS tag''')
-      cursor.execute('''DROP TABLE IF EXISTS author''')
-      cursor.execute('''DROP TABLE IF EXISTS file''')
-      cursor.execute('''DROP TABLE IF EXISTS files_in_repo''')
+      # We have to delete the tables in order, to not break foreign key restrictions
       cursor.execute('''DROP TABLE IF EXISTS tags_in_repo''')
-      cursor.execute('''DROP TABLE IF EXISTS discussion''')
+      cursor.execute('''DROP TABLE IF EXISTS tag''')
+      cursor.execute('''DROP TABLE IF EXISTS files_in_commit''')
+      cursor.execute('''DROP TABLE IF EXISTS commit_parents''')
+      cursor.execute('''DROP TABLE IF EXISTS file''')
       cursor.execute('''DROP TABLE IF EXISTS model''')
       cursor.execute('''DROP TABLE IF EXISTS dataset''')
-      cursor.execute('''DROP TABLE IF EXISTS repository''')
-      cursor.execute('''DROP TABLE IF EXISTS commits''')
-      cursor.execute('''DROP TABLE IF EXISTS commit_parents''')
-      cursor.execute('''DROP TABLE IF EXISTS files_in_commit''')
       cursor.execute('''DROP TABLE IF EXISTS discussion_event''')
+      cursor.execute('''DROP TABLE IF EXISTS discussion''')
+      cursor.execute('''DROP TABLE IF EXISTS commits''')
+      cursor.execute('''DROP TABLE IF EXISTS repository''')
+      cursor.execute('''DROP TABLE IF EXISTS author''')
+      
+      
+      
 
       print("Creating tables...")
 
@@ -115,11 +190,11 @@ def create_schema_mysql(cursor):
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS author
-            (name VARCHAR(256) PRIMARY KEY, avatar_url TEXT, is_pro INTEGER, fullname TEXT, type VARCHAR(64), source VARCHAR(256))
+            (username VARCHAR(256) PRIMARY KEY, avatar_url TEXT, is_pro INTEGER, fullname TEXT, type VARCHAR(64), source VARCHAR(256))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS repository
-            (id VARCHAR(256) PRIMARY KEY, name TEXT, type VARCHAR(7), author VARCHAR(256), sha TEXT, last_modified TEXT, private INTEGER, card_data LONGTEXT, gated INTEGER, likes INTEGER, FOREIGN KEY (author) REFERENCES author(username))
+            (id VARCHAR(256) PRIMARY KEY, name TEXT, type VARCHAR(7), author VARCHAR(256), sha TEXT, last_modified DATETIME, private INTEGER, card_data LONGTEXT, gated INTEGER, likes INTEGER, FOREIGN KEY (author) REFERENCES author(username))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS file
@@ -131,19 +206,19 @@ def create_schema_mysql(cursor):
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS discussion
-            (num INTEGER, repo_id VARCHAR(256), author VARCHAR(256), title TEXT, status TEXT, created_at TEXT, is_pull_request INTEGER, PRIMARY KEY(num, repo_id), FOREIGN KEY (repo_id) REFERENCES repository, FOREIGN KEY (author) REFERENCES author(username))
+            (num INTEGER, repo_id VARCHAR(256), author VARCHAR(256), title TEXT, status TEXT, created_at DATETIME, is_pull_request INTEGER, PRIMARY KEY(num, repo_id), FOREIGN KEY (repo_id) REFERENCES repository(id), FOREIGN KEY (author) REFERENCES author(username))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS model
-            (id VARCHAR(256) PRIMARY KEY, name TEXT, model_id TEXT, author VARCHAR(256), sha TEXT, last_modified TEXT, private INTEGER, pipeline_tag TEXT, downloads INTEGER, library_name TEXT, likes INTEGER, config LONGTEXT, card_data LONGTEXT, gated INTEGER FOREIGN KEY (repo_id) REFERENCES repository)
+            (model_id VARCHAR(256) PRIMARY KEY, pipeline_tag TEXT, downloads INTEGER, library_name TEXT, likes INTEGER, config LONGTEXT, FOREIGN KEY (model_id) REFERENCES repository(id))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS dataset
-            (id VARCHAR(256) PRIMARY KEY, name TEXT, author VARCHAR(256), sha TEXT, last_modified TEXT, private INTEGER, gated INTEGER, citation TEXT, description TEXT, downloads INTEGER, likes INTEGER, card_data LONGTEXT, paperswithcode_id TEXT FOREIGN KEY (repo_id) REFERENCES repository)
+            (dataset_id VARCHAR(256) PRIMARY KEY, description TEXT, citation TEXT, paperswithcode_id TEXT, downloads INTEGER, FOREIGN KEY (dataset_id) REFERENCES repository(id))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS commits
-            (sha VARCHAR(256) PRIMARY KEY, timestamp TEXT, message TEXT, author VARCHAR(256), FOREIGN KEY (author) REFERENCES author(username))
+            (sha VARCHAR(256) PRIMARY KEY, timestamp TIMESTAMP, message TEXT, author VARCHAR(256), FOREIGN KEY (author) REFERENCES author(username))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS commit_parents
@@ -155,7 +230,7 @@ def create_schema_mysql(cursor):
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS discussion_event
-            (id VARCHAR(256) PRIMARY KEY, repo_id VARCHAR(256), discussion_num INTEGER,  type VARCHAR(64), created_at TEXT, author VARCHAR(256), content TEXT, edited INTEGER, hidden INTEGER, new_status TEXT, summary TEXT, sha TEXT, old_title TEXT, new_title TEXT, full_data LONGTEXT, FOREIGN KEY (sha) REFERENCES commits(sha), FOREIGN KEY (author) REFERENCES author(username), FOREIGN KEY (discussion_num, repo_id) REFERENCES discussion(num, repo_id))
+            (id VARCHAR(256) PRIMARY KEY, repo_id VARCHAR(256), discussion_num INTEGER,  type VARCHAR(64), created_at DATETIME, author VARCHAR(256), content TEXT, edited INTEGER, hidden INTEGER, new_status TEXT, summary TEXT, sha VARCHAR(256), old_title TEXT, new_title TEXT, full_data LONGTEXT, FOREIGN KEY (sha) REFERENCES commits(sha), FOREIGN KEY (author) REFERENCES author(username), FOREIGN KEY (discussion_num, repo_id) REFERENCES discussion(num, repo_id))
             ''')
 
       print("Tables created!")
@@ -285,14 +360,15 @@ def populate_commits(cursor, conn, repo_id, type):
       num_commits = int(subprocess.check_output(["git",  "rev-list",  "--count", "HEAD"], cwd=path))
       
 
-      # We will skip repos with more than 2k commits or 30k files
-      if type == 'datasets' or type == 'model':
+      # We will skip repos specified by number of commits or number of files
+      if not (NUM_FILES == -1 and NUM_COMMITS == -1):
             cursor.execute("SELECT COUNT(filename) FROM file WHERE repo_id=%s", [type + '/' + repo_id])
             num_files = cursor.fetchone()
-            if num_commits>2000 or num_files[0] > 30000:
+            print("commits repo:" + num_commits)
+            print("files repo:" + num_files[0])
+            if num_commits > NUM_COMMITS or num_files[0] > NUM_FILES:
                   print("Repo: ", repo_id, " skipped with num_commits: ", num_commits, " and num_files: ", num_files[0])
                   shutil.rmtree(path, ignore_errors=False, onerror=onerror)
-                  # os.system("rm -rf " + repo_path)
                   global SKIPPED_REPOS
                   SKIPPED_REPOS = SKIPPED_REPOS + 1
                   return
@@ -319,7 +395,13 @@ def populate_commits(cursor, conn, repo_id, type):
                   try:
                         # Check whether the files in the commit exist in the repo 
                         # (the file could be deleted, or renamed, so we think we should only track current files)
-                        commit_files      = [file.new_path for file in commit.modified_files]
+                        try:
+                              commit_files      = [file.new_path for file in commit.modified_files]
+                        except ValueError as ve:
+                              eprint("PYDRILLER BUG: There is a bug with parsing of some type of data. Waiting to be fixed...")
+                              eprint("Exception:")
+                              eprint(ve)
+
                         commit_files_dict = {key:repo_files[key] for key in commit_files if key in repo_files.keys()}
 
                         for key, value in commit_files_dict.items():
@@ -447,20 +529,20 @@ def populate_models(cursor, conn, api, lower, upper, limit_date):
       # Apply sort to get the most recent repos (in descending order; direction = -1); Sort just returns 10k repos, use sorted method instead
       hub_models = list(iter(api.list_models(full=True, cardData=True, fetch_config=True, use_auth_token=ACCESS_TOKEN)))
       models = sorted(hub_models, key=lambda d: d.__dict__.get("lastModified"), reverse=True)
-      print("Info retrieved! Gathered", len(hub_models), "models")
+      print("Info retrieved! Gathered", len(models), "models")
       
       print("Starting population into database...")
 
       i = 0
-      full_update = True
+
+      lower, upper = check_negative_indices(len(models), lower, upper)
 
       for model in itertools.islice(models, lower, upper):
             
             model_id = "models/" + model.id
 
             # Gather just those with modifications within the limit_date (e.g., last month)
-            if not full_update or parse(model.__dict__.get("lastModified")) < limit_date:
-                  full_update = False
+            if parse(model.__dict__.get("lastModified")) < limit_date:
                   cursor.execute('''
                   UPDATE repository 
                   SET likes=%s
@@ -475,7 +557,7 @@ def populate_models(cursor, conn, api, lower, upper, limit_date):
             
             i += 1
 
-            # TODO: Do workaround
+            # TODO: Throwing PyDriller exception; catch that
             if model.__dict__.get("id") in ["AmirHussein/icefall-asr-mgb2-conformer_ctc-2022-27-06", "datablations/lm1-misc","tktkdrrrrrrrrrrr/CivitAI_model_info"]:
                   continue
 
@@ -538,17 +620,17 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
       hub_datasets = list(iter(api.list_datasets(full=True, use_auth_token=ACCESS_TOKEN)))
       datasets = sorted(hub_datasets, key=lambda d: d.__dict__.get("lastModified"), reverse=True)
 
-      print("Info retrieved! Gathered", len(hub_datasets), "datasets")
+      print("Info retrieved! Gathered", len(datasets), "datasets")
 
       i = 0
-      full_update = True
+
+      lower, upper = check_negative_indices(len(datasets), lower, upper)
 
       for dataset in itertools.islice(datasets, lower, upper):
 
             dataset_id = "datasets/" + dataset.__dict__.get("id")
 
-            if not full_update or parse(dataset.__dict__.get("lastModified")) < limit_date:
-                  full_update = False
+            if parse(dataset.__dict__.get("lastModified")) < limit_date:
                   cursor.execute('''
                   UPDATE repository 
                   SET likes=%s
@@ -563,7 +645,7 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
 
             i += 1
             
-            # This repo is huge, it is needed a workaround when collecting the commits;
+            # TODO: This repo is huge, it is needed a workaround when collecting the commits;
             if dataset.__dict__.get("id") in ["ywchoi/mdpi_sept10", "ACL-OCL/acl-anthology-corpus", "uripper/ProductScreenshots", "gozfarb/ShareGPT_Vicuna_unfiltered","deepsynthbody/deepfake_ecg_full_train_validation_test"]:
                   continue
 
@@ -573,10 +655,11 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
                   ''', (dataset.author, "hf_owner"))
                   conn.commit()
 
+            last_modified = datetime.strptime(dataset.__dict__.get("lastModified"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S")
             # TODO: Change gated to String
             cursor.execute('''
             INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)
-            ''', (dataset_id, dataset.__dict__.get("id"), "dataset", dataset.__dict__.get("author"), dataset.__dict__.get("sha"), dataset.__dict__.get("lastModified"), dataset.__dict__.get("private"), str(dataset.__dict__.get("cardData")), None, dataset.__dict__.get("likes")))
+            ''', (dataset_id, dataset.__dict__.get("id"), "dataset", dataset.__dict__.get("author"), dataset.__dict__.get("sha"), last_modified, dataset.__dict__.get("private"), str(dataset.__dict__.get("cardData")), None, dataset.__dict__.get("likes")))
             conn.commit()
 
             cursor.execute('''
@@ -620,17 +703,17 @@ def populate_spaces(cursor, conn, api, lower, upper, limit_date):
       hub_spaces = list(iter(api.list_spaces(full=True, use_auth_token=ACCESS_TOKEN)))
       spaces = sorted(hub_spaces, key=lambda d: d.__dict__.get("lastModified"), reverse=True)
 
-      print("Info retrieved! Gathered", len(hub_spaces), "spaces")
+      print("Info retrieved! Gathered", len(spaces), "spaces")
 
       i = 0
-      full_update = True
+      
+      lower, upper = check_negative_indices(len(spaces), lower, upper)
 
       for space in itertools.islice(spaces, lower, upper):
             
             space_id = "spaces/" + space.__dict__.get("id")
 
-            if not full_update or parse(space.__dict__.get("lastModified")) < limit_date:
-                  full_update = False
+            if parse(space.__dict__.get("lastModified")) < limit_date:
                   cursor.execute('''
                   UPDATE repository 
                   SET likes=%s
@@ -640,7 +723,7 @@ def populate_spaces(cursor, conn, api, lower, upper, limit_date):
             
             i += 1
 
-            # This repo always give error with PyDriller, we'll have to take a look -> in web ERROR in deploying
+            # TODO: This repo always give error with PyDriller, we'll have to take a look -> in web ERROR in deploying
             if space.__dict__.get("id") in ["mfrashad/ClothingGAN", "mfrashad/CharacterGAN", "fdfdd12345628/Tainan", "patent/demo1"]:
                   continue
             
@@ -672,34 +755,42 @@ def main(argv):
       start_time = time.time()
 
       if len(argv) == 0:
-        sys.exit(1)
+            eprint("USAGE: python databaseImport.py -c")
+            eprint("       python databaseImport.py -t {model|dataset|space|all} [-l lower_index] [-u upper_index] [-s]")
+            sys.exit(1)
 
       try:
-            opts, args = getopt.getopt(argv, "t:l:u:c", [])
+            opts, args = getopt.getopt(argv, "t:l:u:cs", []) # The most used in python is argparse (instead of getopt)
       except getopt.GetoptError:
-            eprint("Wrong usage. USAGE: python databaseImport.py [-c] [-t type] [-l lower_index] [-u upper_index]")
+            eprint("USAGE: python databaseImport.py -c")
+            eprint("       python databaseImport.py -t {model|dataset|space|all} [-l lower_index] [-u upper_index] [-s]")
             sys.exit(1)
       
-      # Out file
-      # out=open('path')
-      # print(",",file=out)
-      
-      token_file = open("read_token", "r")      
-      ACCESS_TOKEN = token_file.readline()
-      token_file.close()
+      config = read_config()
 
+      try:
+            ACCESS_TOKEN = config["hfh_token"]
+      except KeyError as ke:
+            eprint("Missing token in hfc.config file. Please add token in 'hfh_token' field.")
+            sys.exit(1)
+
+
+      status_code = validate_token(ACCESS_TOKEN)
+      
+      
       # Monthly recovery, we just need the updates of the last month; Can be configured to N months
       limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=1))
 
 
-      lower = None
+      lower = 0
       upper = None
       type = ""
+      skip = False
 
       conn, database = create_connection_mysql()
 
       c = conn.cursor()
-      print("connection done")
+      print("Connection to DB done!")
       
       for opt, arg in opts:
             if opt in ("-t"):
@@ -709,40 +800,37 @@ def main(argv):
             if opt in ("-u"):
                   upper = int(arg)
             if opt in ("-c"):
+                  print("Flag -c detected, creating the database schema...")
                   create_schema_mysql(c)
                   print("Database schema created!")
+                  print("If you want to start importing repositories, launch again this script without -c flag!")
+                  sys.exit(0)
+            if opt in ("-s"):
+                  skip = True
+                  print("Flag -s detected. Skipping repos with parameters of hfc.config.")
+                  global NUM_COMMITS
+                  NUM_COMMITS = config['num_commits']
+                  global NUM_FILES
+                  NUM_FILES = config['num_files']
+
+      # Monthly recovery, we just need the updates of the last month; Can be configured to N months
+      limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=1))
 
 
       # Settings to avoid formatting error when inserting text
-      c.execute('SET NAMES utf8mb4')
+      c.execute("SET NAMES utf8mb4")
       c.execute("SET CHARACTER SET utf8mb4")
       c.execute("SET character_set_connection=utf8mb4")
+      c.execute("SET character_set_server=utf8mb4")
 
-      def check_database_schema(cursor, database):
-            """
-            Auxiliar function to check if all the tables required are in the database.
-            
-            :param cursor: The MySQL connection cursor to execute operations such as SQL statements.
-            :type cursor: `cursor.MySQLCursor`_
-            :param database: MariaDB database name.
-            :type database: str
-            """
-            cursor.execute("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s", [database])
-            db_tables = list(map(lambda x: x[0], cursor.fetchall()))
-            
-            hf_tables = ["author", "commit_parents", "commits", "dataset", "discussion", "discussion_event", "file", "files_in_commit", "model", "repository", "tag", "tags_in_repo"]
-            
-            return set(hf_tables).issubset(db_tables)
       
       tables_exist = check_database_schema(c, database)
 
       if not tables_exist:
-            eprint("There are some (or all) tables required missing in the target database.\nPlease, if the tables are not created following the HFCommunity schema use the -c flag.\nUSAGE: python databaseImport.py -c [-t type]")
-            sys.exit(1)
+            eprint("There are some (or all) tables required missing in the target database.\nThis script will delete any existing table of the HFC schema (it will leave any other existing table of the database) and create the schema.\nCreating database schema...")
+            create_schema_mysql(c)
+            print("Database schema created!")
       
-      exit(1)
-
-
       api = HfApi()
 
       # Import by type. 
@@ -752,10 +840,14 @@ def main(argv):
             populate_spaces(c, conn, api, lower, upper, limit_date)
       elif type == "model":
             populate_models(c, conn, api, lower, upper, limit_date)
-      else:
+      elif type=="all":
             populate_datasets(c, conn, api, lower, upper, limit_date)
             populate_spaces(c, conn, api, lower, upper, limit_date)
             populate_models(c, conn, api, lower, upper, limit_date)
+      else:
+            print("USAGE: python databaseImport.py -c")
+            print("       python databaseImport.py -t {model|dataset|space|all} [-l lower_index] [-u upper_index] [-s]")
+            sys.exit(0)
 
       # Save (commit) the changes
       conn.commit()
@@ -764,8 +856,8 @@ def main(argv):
       # Just be sure any changes have been committed or they will be lost.
       conn.close()
 
-      # TODO: Workaround for skipped repos
-      if type == "dataset":
+      
+      if skip:
             print("SKIPPED REPOS: ", SKIPPED_REPOS)
 
       # Printing execution time...

@@ -6,3 +6,4 @@ PyDriller==2.1
 pytz==2022.1
 types-pytz==2022.1.2
 python-dateutil==2.8.2
+requests==2.28.1
