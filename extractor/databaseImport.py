@@ -364,8 +364,6 @@ def populate_commits(cursor, conn, repo_id, type):
       if not (NUM_FILES == -1 and NUM_COMMITS == -1):
             cursor.execute("SELECT COUNT(filename) FROM file WHERE repo_id=%s", [type + '/' + repo_id])
             num_files = cursor.fetchone()
-            print("commits repo:" + num_commits)
-            print("files repo:" + num_files[0])
             if num_commits > NUM_COMMITS or num_files[0] > NUM_FILES:
                   print("Repo: ", repo_id, " skipped with num_commits: ", num_commits, " and num_files: ", num_files[0])
                   shutil.rmtree(path, ignore_errors=False, onerror=onerror)
@@ -411,8 +409,8 @@ def populate_commits(cursor, conn, repo_id, type):
                         
                         n = len(commit_files) - len(commit_files_dict)
 
-                        if n > 0:
-                              eprint(str(n) + " file(s) of repo (type: " + type + ", sha: ", commit.hash, ") " + repo_id + " not found.")
+                        # if n > 0:
+                        #       eprint(str(n) + " file(s) of repo (type: " + type + ", sha: ", commit.hash, ") " + repo_id + " not found.")
 
                   except AttributeError as error:
                         eprint("File searching error. Printing Exception:")
@@ -571,9 +569,12 @@ def populate_models(cursor, conn, api, lower, upper, limit_date):
             config = str(model.__dict__.get("config"))
             config = clean(config, no_emoji=True)
 
+            # LastModified to datetime
+            last_modified = datetime.strptime(model.__dict__.get("lastModified"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S")
+
             cursor.execute('''
             INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)
-            ''', (model_id, model.__dict__.get("id"), "model", model.__dict__.get("author"), model.__dict__.get("sha"), model.__dict__.get("lastModified"), model.__dict__.get("private"), str(model.__dict__.get("cardData")), model.__dict__.get("gated"), model.__dict__.get("likes")))
+            ''', (model_id, model.__dict__.get("id"), "model", model.__dict__.get("author"), model.__dict__.get("sha"), last_modified, model.__dict__.get("private"), str(model.__dict__.get("cardData")), model.__dict__.get("gated"), model.__dict__.get("likes")))
 
             # Commit to the DB because of the FK constraint
             conn.commit()
@@ -655,7 +656,7 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
                   ''', (dataset.author, "hf_owner"))
                   conn.commit()
 
-            # 2023-03-16T20:10:19.000Z
+            
             last_modified = datetime.strptime(dataset.__dict__.get("lastModified"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S")
             # TODO: Change gated to String
             cursor.execute('''
@@ -734,9 +735,11 @@ def populate_spaces(cursor, conn, api, lower, upper, limit_date):
                   ''', (space.author, "hf_owner"))
                   conn.commit()
 
+            last_modified = datetime.strptime(space.__dict__.get("lastModified"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S")
+
             cursor.execute('''
             INSERT INTO repository (id, name, type, author, sha, last_modified, private, card_data, gated, likes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE name = values(name), type = values(type), author = values(author), sha = values(sha), last_modified= values(last_modified), private = values(private), card_data = values(card_data), gated = values(gated), likes = values(likes)
-            ''', (space_id, space.__dict__.get("id"), "space", space.__dict__.get("author"), space.__dict__.get("sha"), space.__dict__.get("lastModified"), space.__dict__.get("private"), str(space.__dict__.get("cardData")), space.__dict__.get("gated"), space.__dict__.get("likes")))
+            ''', (space_id, space.__dict__.get("id"), "space", space.__dict__.get("author"), space.__dict__.get("sha"), last_modified, space.__dict__.get("private"), str(space.__dict__.get("cardData")), space.__dict__.get("gated"), space.__dict__.get("likes")))
             
             populate_tags(cursor, conn, space.tags, space.id, "spaces")
             populate_files(cursor, space.siblings, space.id, "spaces")
@@ -781,7 +784,7 @@ def main(argv):
       
       # Monthly recovery. NOT BY DEFAULT.
       # Default date (Jan 1st 1970 - UNIX epoch time)
-      limit_date = datetime.fromtimestamp(0)
+      limit_date = pytz.UTC.localize(datetime.fromtimestamp(0))
       try:
             last_n_months = config["last_n_months"]
             limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=last_n_months))
@@ -819,19 +822,21 @@ def main(argv):
                   NUM_COMMITS = config['num_commits']
                   global NUM_FILES
                   NUM_FILES = config['num_files']
-
-
+      
+      
       # Settings to avoid formatting error when inserting text
       c.execute("SET NAMES utf8mb4")
       c.execute("SET CHARACTER SET utf8mb4")
       c.execute("SET character_set_connection=utf8mb4")
       c.execute("SET character_set_server=utf8mb4")
+      query = """ALTER DATABASE {} CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci;""".format(config["database"])
+      c.execute(query)
 
       
       tables_exist = check_database_schema(c, database)
 
       if not tables_exist:
-            eprint("There are some (or all) tables required missing in the target database.\nThis script will delete any existing table of the HFC schema (it will leave any other existing table of the database) and create the schema.\nCreating database schema...")
+            eprint("There are some (or all) tables required missing in the target database.\nThis script will delete any existing table of the HFC schema (it will leave any other existing table of the database) and create the full schema.\nCreating database schema...")
             create_schema_mysql(c)
             print("Database schema created!")
       
