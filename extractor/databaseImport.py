@@ -9,6 +9,7 @@ import time
 from pydriller import Repository
 from git.exc import GitCommandError
 import mysql.connector
+from mysql.connector import errorcode
 import json
 from huggingface_hub import HfApi
 import itertools
@@ -148,10 +149,23 @@ def create_connection_mysql():
       config = read_config()
       
       try :
-            conn = mysql.connector.connect(user=config['user'], password=config['pass'], host=config['host'], port=config['port'], database=config['database'])  
-      except:
-            eprint("Database connection failed")
+            conn = mysql.connector.connect(user=config['user'], password=config['pass'], host=config['host'], port=config['port'], database=config['database'])
+      except KeyError as ke:
+            eprint("Missing some mandatory parameters in hfc.config. Don't forget to specify 'user', 'pass', 'host', 'port' and 'database'.")
             sys.exit(1)
+      except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                  eprint("Error in connection to the MariaDB. Something is wrong with your user name or password.")
+                  sys.exit(1)
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                  print("Database specified in hfc.config does not exist. Creating such database...")
+                  conn = mysql.connector.connect(user=config['user'], password=config['pass'], host=config['host'], port=config['port'])
+                  conn.cursor().execute(f"CREATE DATABASE IF NOT EXISTS {config['database']};")
+                  print("Database created!")
+                  conn.cursor().execute(f"USE {config['database']};")
+            else:
+                  eprint(err)
+                  sys.exit(1)
       return conn, config['database']
 
 
@@ -787,7 +801,10 @@ def main(argv):
       limit_date = pytz.UTC.localize(datetime.fromtimestamp(0))
       try:
             last_n_months = config["last_n_months"]
-            limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=last_n_months))
+            if last_n_months == -1:
+                  print("'last_n_months' parameter of hfc.config is at default value. Retrieving all information!")
+            else:
+                  limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=last_n_months))
       except KeyError as ke:
             print("Missing n_last_month parameter in hfc.config file. Retrieving all information!")
 
@@ -819,9 +836,9 @@ def main(argv):
                   skip = True
                   print("Flag -s detected. Skipping repos with parameters of hfc.config.")
                   global NUM_COMMITS
-                  NUM_COMMITS = config['num_commits']
+                  NUM_COMMITS = config['max_num_commits']
                   global NUM_FILES
-                  NUM_FILES = config['num_files']
+                  NUM_FILES = config['max_num_files']
       
       
       # Settings to avoid formatting error when inserting text
