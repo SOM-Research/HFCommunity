@@ -123,3 +123,7 @@ figcaption {
   margin-left:10px;
   margin-right:10px;
 }
+.databaseDiagram > img{
+  width:80%;
+  height: auto;
+}
