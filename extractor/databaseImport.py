@@ -398,8 +398,8 @@ def populate_commits(cursor, conn, repo_id, type):
                   # Commit author
                   conn.commit()
                   cursor.execute('''
-                  INSERT IGNORE INTO commits (sha, timestamp, message, author) VALUES (%s, %s, %s, %s)
-                  ''', (commit.hash, commit.author_date, commit.msg, commit.author.name))
+                        INSERT INTO commits (sha, timestamp, message, author, source) VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE  timestamp = values(timestamp), message = values(message), author = values(author), source = values(source)
+                        ''', (commit.hash, commit.author_date, commit.msg, commit.author.name, "pydriller"))
                   
                   # Commit the commit
                   conn.commit()
@@ -804,7 +804,7 @@ def main(argv):
             if last_n_months == -1:
                   print("'last_n_months' parameter of hfc.config is at default value. Retrieving all information!")
             else:
-                  limit_date = pytz.UTC.localize(datetime.now() - dateutil.relativedelta.relativedelta(months=last_n_months))
+                  limit_date = pytz.UTC.localize((datetime.now() - dateutil.relativedelta.relativedelta(months=last_n_months)).replace(day=1, hour=0, minute=0, second=0, microsecond=0))
       except KeyError as ke:
             print("Missing n_last_month parameter in hfc.config file. Retrieving all information!")
 
