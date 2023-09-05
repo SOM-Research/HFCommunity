@@ -228,11 +228,11 @@ def create_schema_mysql(cursor):
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS dataset
-            (dataset_id VARCHAR(256) PRIMARY KEY, description TEXT, citation TEXT, paperswithcode_id TEXT, downloads INTEGER, FOREIGN KEY (dataset_id) REFERENCES repository(id))
+            (dataset_id VARCHAR(256) PRIMARY KEY, description LONGTEXT, citation TEXT, paperswithcode_id TEXT, downloads INTEGER, FOREIGN KEY (dataset_id) REFERENCES repository(id))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS commits
-            (sha VARCHAR(256) PRIMARY KEY, timestamp TIMESTAMP, message TEXT, author VARCHAR(256), FOREIGN KEY (author) REFERENCES author(username))
+            (sha VARCHAR(256) PRIMARY KEY, timestamp TIMESTAMP, message LONGTEXT, author VARCHAR(256), FOREIGN KEY (author) REFERENCES author(username))
             ''')
       cursor.execute('''
             CREATE TABLE IF NOT EXISTS commit_parents
