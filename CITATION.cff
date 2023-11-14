@@ -1,0 +1,64 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  HFCommunity: A Tool to Analyze the Hugging Face Hub
+  Community
+message: >-
+  If you use this software, please cite the article from
+  preferred-citation.
+type: software
+authors:
+  - orcid: 'https://orcid.org/0000-0002-5334-9041'
+    affiliation: IN3 - UOC
+    email: aait_mimoune@uoc.edu
+    given-names: Adem
+    family-names: Ait
+  - orcid: 'https://orcid.org/0000-0002-2326-1700'
+    affiliation: IN3 - UOC
+    email: jcanovasi@uoc.edu
+    given-names: Javier Luis
+    family-names: Cánovas Izquierdo
+  - orcid: 'https://orcid.org/0000-0003-2418-2489'
+    given-names: Jordi
+    family-names: Cabot
+    email: jordi.cabot@list.lu
+    affiliation: >-
+      Luxembourg Institute of Science and Technology –
+      University of Luxembourg
+identifiers:
+  - type: doi
+    value: 10.1109/SANER56733.2023.00080
+    description: The paper presenting the tool
+repository-code: 'https://github.com/SOM-Research/HFCommunity'
+url: 'https://som-research.github.io/HFCommunity/'
+repository: 'https://som-research.github.io/HFCommunity/docs/index.html'
+keywords:
+  - Mining Software Repositories
+  - Data Analysis
+  - Hugging Face
+license: CC-BY-SA-4.0
+version: '1.0'
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Ait"
+    given-names: "Adem"
+    orcid: "https://orcid.org/0000-0002-5334-9041"
+  - family-names: "Cánovas Izquierdo"
+    given-names: "Javier Luis"
+    orcid: "https://orcid.org/0000-0002-2326-1700"
+  - family-names: "Cabot"
+    given-names: "Jordi"
+    orcid: "https://orcid.org/0000-0003-2418-2489"
+  title: "HFCommunity: A Tool to Analyze the Hugging Face Hub Community"
+  conference: 
+    name: "IEEE International Conference on Software Analysis, Evolution and Reengineering, SANER 2023, Taipa, Macao, March 21-24, 2023"
+  start: 728 
+  end: 732 
+  year: 2023
+  publisher:
+    name: IEEE
+  url: "https://doi.org/10.1109/SANER56733.2023.00080"
+  doi: "10.1109/SANER56733.2023.00080"
