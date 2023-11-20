@@ -29,7 +29,7 @@
             <div class="container">
                 
                 <a class="navbar-brand" href="index.html">
-                    <img style="float: left; padding-right: 10px; padding-top: 5px; width: 45px;" src="resources/figs/HFCommunity_logo.png"/>
+                    <img style="float: left; padding-right: 10px; padding-top: 5px; width: 45px;" src="resources/figs/HFCommunity_logo.svg"/>
                     <span class="align-middle">HFCommunity</span>
                 </a>  
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,45 +52,52 @@
                         </li>
                       </ul>
                 </div>
-
             </div>
         </nav>
 
         <div class="container">
             <div class="row d-flex justify-content-center">
-        
                 <div class="col-md-9">
-                    <h3>HFCommunity information schema</h3>
-                    <p class="p-2">The information to build HFCommunity from Hugging Face Hub repositories comes from two sources: (1) Hugging Face Hub client library and Hub API and (2) Git. </p>
-
-                    <p class="p-2">Hugging Face offers a Python library to exploit the Hub called <a href="https://huggingface.co/docs/huggingface_hub/index" target="_blank">Hub client library</a> which allows the interaction with the Hugging Face Hub, such as deleting or cloning a repository, uploading files, and creating and updating a branch. Furthermore, it supports the retrieval of information from these repositories.</p>
-
-                    <p class="p-2">However, there is some information valuable in a repository that is not tracked by this library: development history. The information about the commits can be useful to understand the evolution and development practices of a project. Thus, we have recovered this information using a Git analyzer tool: <a href="https://pydriller.readthedocs.io/en/latest/" target="_blank">PyDriller</a>. As a result, besides the information available in the Hub client library,  we offer the data of the commits of each repository which includes the date and time of the commit, its author, and the changed files, among others.</p>
-
-                    <h5>UML diagram</h5>
-                    <p class="p-2"></p>
-                </div><!-- /.col-md-9 -->
-
-                <div class="text-center">
-                    <img src="resources/figs/conceptualSchema-v1.1.png">
-                </div>
-                
-                <div class="col-md-9">
-                    <h3>&nbsp;</h3>
-                    <h5>Limitations</h5>
-
-                        <p class="p-2">We detected some limitations on our proposal:
-                            <ul>
-                                <li>The <b>Hub client library is currently under development</b>, thus having some limitations on the data retrieval. For example, the complete information about an author is only retrievable for the authors of discussions, as we recover it directly from the API endpoint.</li>
-                                <li>There is not a way to <b>link commit authors with users</b> of the Hugging Face Hub.</li>
-                            </ul>
-                            
-                        </p>
+                    <h3>Version History of HFCommunity</h3>
+                    <p class="p-2">This page keeps a track of the releases and design modifications of HFCommunity.</p>
+                    <hr>
+                    <h4>v1.1</h4>
+                    <p class="p-2">This is an extended version of the first version. The main changes are:
+                        <ul>
+                            <li>Addition (e.g., ModifiedFile and RepoFile, replacing File) and extension (e.g., Commit or Space) of classes.</li>
+                            <li>Addition of new relationships, some as new information (e.g., datasets used) or as enhancements for better performance (e.g., repo-commits).</li>
+                            <li>Adaptation of extractor source code to current version of the Hub client library. This includes better performance and robustness (e.g., exception handling).</li>
+                            <li>Modified the use of index parameters in the extractor execution. Now it is only possible to slice the list from the beginning (i.e., the newest repository) to a threshold. We believe this better translates to more accurate users' needs.</li>
+                        </ul> 
+                        The UML and database schema of this version, with changes highlighted (green are added changes and red removed ones), are:
+                    </p>
+                    
+                    <h5>UML diagram (v1.1)</h5>
+                    <div class="text-center">
+                        <img class="img-fluid" src="resources/figs/conceptualSchema-v1.1-changes.png">
                     </div>
-                
+
+                    <h5>Database schema (v1.1)</h5>
+                    <div class="text-center">
+                        <img class="img-fluid" src="resources/figs/databaseDiagram-v1.1-changes.png">
+                    </div>
+                    <hr>
+                    <h5>v1.0</h5>
+                    <p class="p-2">This is the first version of HFCommunity. It corresponds to the version presented in the 30th IEEE International Conference on Software Analysis, Evolution and Reengineering (<a href="http://www.wikicfp.com/cfp/servlet/event.showcfp?eventid=161008&copyownerid=174825" target="_blank">SANER 2023</a>). The paper can be accessed from <a href="https://github.com/ademait/ademait.github.io/blob/main/papers/saner23-ademait-hfc.pdf" target="_blank">here</a>. The UML and database schema of this version are:</p>
+                    
+                    <h5>UML diagram (v1.0)</h5>
+                    <div class="text-center">
+                        <img class="img-fluid" src="resources/figs/conceptualSchema-v1.0.png">
+                    </div>
+
+                    <h5>Database schema (v1.0)</h5>
+                    <div class="text-center">
+                        <img class="img-fluid" src="resources/figs/databaseDiagram-v1.0.png">
+                    </div>
+                </div>
             </div>
         </div>
-        
+
         <footer>
             <div class="container">
               <div class="row">

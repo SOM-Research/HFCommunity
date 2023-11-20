@@ -6,11 +6,11 @@
 }
 
 .jumbotron h1 {
-  padding-top: 45px;
+  padding-top: 1em;
   color: white;
 }
 
-.jumbotron h2 {
+.jumbotron h3 {
   color: white;
 }
 
@@ -122,4 +122,77 @@ figcaption {
 .navbar-nav > li{
   margin-left:10px;
   margin-right:10px;
+}
+
+.link {
+  width: 10rem;
+  height: 10rem;
+  display: inline-block;
+  font: 300 1.55rem/1.4 "Josefin Sans";
+  text-transform: uppercase;
+  letter-spacing: 0.1175em;
+  word-spacing: 0.3em;
+  text-decoration: none;
+}
+.link__svg {
+  width: 100%;
+  height: auto;
+  transform-box: fill-box;
+  fill: #2B3338;
+  stroke: #2B3338;
+  stroke-width: 0.05em;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.link__cloud {
+  transform-origin: 50% 50%;
+  animation: rotate normal infinite 60s linear;
+  fill: rgb(250, 122, 35, .7);
+}
+.link__cloud:hover {
+  transform-origin: 50% 50%;
+  animation: rotate normal infinite 60s linear;
+  fill: rgb(250, 122, 35, .9);
+}
+.link__svg:hover .link__cloud {
+  transform-origin: 50% 50%;
+  animation: rotate normal infinite 60s linear;
+  fill: rgb(250, 122, 35, .9);
+}
+.link__arrow {
+  transform-origin: 50% 50%;
+  transition: transform 0.15s cubic-bezier(0.32, 0, 0.67, 0);
+}
+.link:hover .link__arrow {
+  transform: scale(1.1);
+  transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+  transform: rotate(360deg);/* normal infinite 60s linear;*/
+  stroke: white;
+  stroke-width: 0.25em;
+}
+.link__arrow {
+  stroke-width: 0.1em;
+}
+.link__text {
+  animation: rotateReverse normal infinite 20s linear;
+  transform-origin: 50% 50%;
+}
+.link:hover .link__text {
+  animation-play-state: paused;
+}
+.link--alt {
+  font-size: 1.15rem;
+  letter-spacing: 0;
+  word-spacing: 0;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes rotateReverse {
+  to {
+    transform: rotate(-360deg);
+  }
 }
