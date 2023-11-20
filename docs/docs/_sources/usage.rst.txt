@@ -71,13 +71,13 @@ Execution
 
 Once installed the dependencies and libraries, the ``databaseImport`` script can be executed as follows:
 
-#. Clone this repository.
+#. Clone the `HFCommunity repository <https://github.com/SOM-Research/HFCommunity>`_.
 #. Edit the ``hfc.config`` file according to your configuration.
 #. Launch the extractor via command line (if the database schema is not created, it will be created automatically). The extract admits several parameters:
 
     .. code-block:: console
 
-        $ python databaseImport.py -t {model|dataset|space|all} [-l lower_index] [-u upper_index] [-s]
+        $ python databaseImport.py -t {model|dataset|space|all} [-i limit_index] [-s]
 
 
 #. Furthermore, the script can be used to only generate the required database schema (see `ER diagram`_). Execute the script with the following flag:
@@ -96,22 +96,19 @@ python databaseImport.py -t <type>
     This flag is mandatory, and it indicates which type of repositories will import the script. 
     If it is wanted to import all repositories (not recommended because of time and resource consumption) use the ``all`` argument.
 
-python databaseImport.py -l <l_index> -u <u_index>
-    The repositories are retrieved in a list, sorted (descending) by its last modification date (the most recent are in lower indices).
-    If it is wanted to import just a subset of these, indices will slice the list. 
-    Then, from all repositories it selects the repositories above the ``l_index`` and below ``u_index`` from the repositories retrieved of HFH. 
-    Note that it is not necessary to specify both, it can only be defined the lower index, which would mean that the upper index will default to the last element of the list, and viceversa.
-    This is intended to be used when we want to populate a reduced version of the HFC database. 
-    Furthermore, indices can also be negative and will start counting from the end.
-    **Note** that if the indices exceed the size of the list it will terminate the process to adjust the indices (it is printed the length of the list in stdout, to adjust the indices in the second execution).
-    If the indices are positive but exceed the size of the list, it will end without forcing, but it won't import anything.
+python databaseImport.py -i <limit_index>
+    The repositories are retrieved sorted (descending) by its last modification date (the most recent are in lower indices).
+    If it is wanted to import just a subset of these (i.e., 100 most recent), the indix will slice the list. 
+    Then, from all repositories it selects the repositories below the ``limit_index`` from all the repositories retrieved of HFH. 
+    This is intended to be used when we want to populate a reduced version of the HFC database.
+    Note that if the index exceed the size of the list, it will import the whole set.
 
 python databaseImport.py -s
     The importation of dataset and model repositories may consume excessive resources in some cases.
     When this flag is activated, the script will read the ``num_commits`` and ``num_files`` parameters of the ``hfc.config`` file, and skip repositories having more than one of these threshold (each parameter represents a threshold and they are evaluated independently).
     It is not necessary to specify both.
     The script will print to stdout the repositories skipped and the total number of skipped repositories at the end.
-    It is highly recommended using this option, even in high performance machines, as some repositories may have tens of thousands of commits and files, which it will consume excessive RAM memory.
+    **It is highly recommended using this option**, even in high performance machines, as some repositories may have tens of thousands of commits and files, which it will consume excessive RAM memory.
 
 
 
@@ -124,7 +121,7 @@ To have a clear idea of how to execute the script, we present some examples in t
 
 .. code-block:: console
 
-    $ python databaseImport.py -t model -u 100
+    $ python databaseImport.py -t model -i 100
 
 *"I want to retrieve all repositories of HFH, but skip those above the threshold."*
 
@@ -132,8 +129,8 @@ To have a clear idea of how to execute the script, we present some examples in t
 
     $ python databaseImport.py -t all -s
 
-*"I want to retrieve the 50 least recent modified spaces, but skip those above the threshold."*
+*"I want to retrieve the 50 most recent modified spaces, but skip those above the threshold."*
 
 .. code-block:: console
 
-    $ python databaseImport.py -t space -l -50 -s
+    $ python databaseImport.py -t space -i -50 -s

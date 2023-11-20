@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Script docs &mdash; HFCommunity-extractor 1.0 documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Script docs &mdash; HFCommunity-extractor 1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
     <link rel="shortcut icon" href="_static/readthedocs_favicon.png"/>
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+  
         <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script src="_static/clipboard.min.js"></script>
         <script src="_static/copybutton.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -42,9 +46,27 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Script docs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Script docs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.check_database_schema"><code class="docutils literal notranslate"><span class="pre">check_database_schema()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.create_connection_mysql"><code class="docutils literal notranslate"><span class="pre">create_connection_mysql()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.create_schema_mysql"><code class="docutils literal notranslate"><span class="pre">create_schema_mysql()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.eprint"><code class="docutils literal notranslate"><span class="pre">eprint()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.onerror"><code class="docutils literal notranslate"><span class="pre">onerror()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_commits"><code class="docutils literal notranslate"><span class="pre">populate_commits()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_datasets"><code class="docutils literal notranslate"><span class="pre">populate_datasets()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_discussions"><code class="docutils literal notranslate"><span class="pre">populate_discussions()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_files"><code class="docutils literal notranslate"><span class="pre">populate_files()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_models"><code class="docutils literal notranslate"><span class="pre">populate_models()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_space_dependencies"><code class="docutils literal notranslate"><span class="pre">populate_space_dependencies()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_spaces"><code class="docutils literal notranslate"><span class="pre">populate_spaces()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.populate_tags"><code class="docutils literal notranslate"><span class="pre">populate_tags()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.read_config"><code class="docutils literal notranslate"><span class="pre">read_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#databaseImport.validate_token"><code class="docutils literal notranslate"><span class="pre">validate_token()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support.html">Support</a></li>
 </ul>
@@ -73,15 +95,15 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="module-databaseImport">
-<span id="script-docs"></span><h1>Script docs<a class="headerlink" href="#module-databaseImport" title="Permalink to this headline">¶</a></h1>
+  <section id="module-databaseImport">
+<span id="script-docs"></span><h1>Script docs<a class="headerlink" href="#module-databaseImport" title="Permalink to this heading"></a></h1>
 <p>Script to retrieve HFH and Git data, and to create and to populate a MariaDB database.</p>
 <dl class="py function">
-<dt id="databaseImport.check_database_schema">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">check_database_schema</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#check_database_schema"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.check_database_schema" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.check_database_schema">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">check_database_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#check_database_schema"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.check_database_schema" title="Permalink to this definition"></a></dt>
 <dd><p>Auxiliar function to check if all the tables required are in the database.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
 <li><p><strong>database</strong> (<em>str</em>) – MariaDB database name.</p></li>
@@ -91,67 +113,46 @@
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.check_negative_indices">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">check_negative_indices</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list_len</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u_index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#check_negative_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.check_negative_indices" title="Permalink to this definition">¶</a></dt>
-<dd><p>Auxiliar function to check whether the negative indices used to slice the retrieved repositories list, are adjusted to its length.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>list_len</strong> (<em>int</em>) – Length of the retrieved repositories list.</p></li>
-<li><p><strong>l_index</strong> (<em>int</em>) – Lower index.</p></li>
-<li><p><strong>u_index</strong> (<em>int</em>) – Upper index.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A tuple of the lower and upper index adjusted to the list index.</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>(int, int)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="databaseImport.create_connection_mysql">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">create_connection_mysql</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#create_connection_mysql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.create_connection_mysql" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.create_connection_mysql">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">create_connection_mysql</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#create_connection_mysql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.create_connection_mysql" title="Permalink to this definition"></a></dt>
 <dd><p>Configures a database connection to a MySQL/MariaDB database.
 Database configuration file must be located in the path as a JSON file called <cite>hfc.config</cite>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Tuple containing the MySQL connector to the database specified in the configuration file and the database name.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>(<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html">connection.MySQLConnection</a>, str)</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.create_schema_mysql">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">create_schema_mysql</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#create_schema_mysql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.create_schema_mysql" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.create_schema_mysql">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">create_schema_mysql</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#create_schema_mysql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.create_schema_mysql" title="Permalink to this definition"></a></dt>
 <dd><p>Creates the database schema, following this <a class="reference external" href="https://som-research.github.io/HFCommunity/download.html#er_diagram">ER diagram</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.eprint">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">eprint</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#eprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.eprint" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.eprint">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">eprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#eprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.eprint" title="Permalink to this definition"></a></dt>
 <dd><p>Auxiliar function to print errors to stderr.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.main">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">main</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argv</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.main" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.main">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argv</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.main" title="Permalink to this definition"></a></dt>
 <dd><p>Main method. Called when invoking the script.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.onerror">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">onerror</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exc_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#onerror"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.onerror" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.onerror">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">onerror</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exc_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#onerror"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.onerror" title="Permalink to this definition"></a></dt>
 <dd><p>Error handler for <code class="docutils literal notranslate"><span class="pre">shutil.rmtree</span></code>. Intended for Windows usage (e.g., <a class="reference external" href="https://stackoverflow.com/questions/2656322/shutil-rmtree-fails-on-windows-with-access-is-denied">Acces Denied</a>)</p>
 <p>If the error is due to an access error (read only file)
 it attempts to add write permission and then retries.</p>
@@ -160,53 +161,35 @@ it attempts to add write permission and then retries.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.populate_commits">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_commits</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_commits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_commits" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.populate_commits">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_commits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_commits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_commits" title="Permalink to this definition"></a></dt>
 <dd><p>Importation of commit information using PyDriller.
-It inserts commit information into <code class="docutils literal notranslate"><span class="pre">commits</span></code>, <code class="docutils literal notranslate"><span class="pre">author</span></code> and <code class="docutils literal notranslate"><span class="pre">files_in_commit</span></code> tables.</p>
+It inserts commit information into <code class="docutils literal notranslate"><span class="pre">commits</span></code>, <code class="docutils literal notranslate"><span class="pre">author</span></code>, <code class="docutils literal notranslate"><span class="pre">modified_file</span></code> and <code class="docutils literal notranslate"><span class="pre">files_in_commit</span></code> tables.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
 <li><p><strong>conn</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html">connection.MySQLConnection</a>) – The MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions. Used to commit changes to fulfill FK restrictions.</p></li>
-<li><p><strong>repo_id</strong> (<em>str</em>) – The full name (i.e., “owner/repo_name”) of the repository.</p></li>
-<li><p><strong>type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
+<li><p><strong>repo_name</strong> (<em>str</em>) – The full name (i.e., “owner/repo_name”) of the repository.</p></li>
+<li><p><strong>repo_type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.populate_dataset_files">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_dataset_files</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_dataset_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_dataset_files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Importation of dataset file information.
-Dataset objects retrieved from <code class="docutils literal notranslate"><span class="pre">huggingface_hub</span></code> library (API) do not include the file information of the repository.
-The files can be retrieved using an auxiliar function (<code class="docutils literal notranslate"><span class="pre">api.list_repo_files</span></code>).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
-<li><p><strong>dataset_id</strong> (<em>str</em>) – The name of the dataset repository.</p></li>
-<li><p><strong>api</strong> (<a class="reference external" href="https://huggingface.co/docs/huggingface_hub/v0.16.3/en/package_reference/hf_api#huggingface_hub.HfApi">huggingface_hub.HfApi</a>) – The huggingface_hub API object pointer.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="databaseImport.populate_datasets">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_datasets</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_datasets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_datasets" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.populate_datasets">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_datasets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_datasets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_datasets" title="Permalink to this definition"></a></dt>
 <dd><p>Importation of the information of datasets.
-It retrieves the whole set of datasets from HFH, and optionally, it slices the set using the lower and upper params. 
-It inserts dataset information into <code class="docutils literal notranslate"><span class="pre">repository</span></code>, <code class="docutils literal notranslate"><span class="pre">dataset</span></code> and <code class="docutils literal notranslate"><span class="pre">author</span></code> tables, and calls the populate methods to fill the remaining tables (not including <code class="docutils literal notranslate"><span class="pre">populate_models</span></code> and <code class="docutils literal notranslate"><span class="pre">populate_spaces</span></code>)..</p>
+It retrieves the whole set of models from HFH or, optionally, the first <code class="docutils literal notranslate"><span class="pre">limit_index</span></code> elements. 
+It inserts dataset information into <code class="docutils literal notranslate"><span class="pre">repository</span></code>, <code class="docutils literal notranslate"><span class="pre">dataset</span></code> and <code class="docutils literal notranslate"><span class="pre">author</span></code> tables, and calls the rest of populate methods to fill the remaining tables (not including <code class="docutils literal notranslate"><span class="pre">populate_models</span></code> and <code class="docutils literal notranslate"><span class="pre">populate_spaces</span></code>).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
 <li><p><strong>conn</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html">connection.MySQLConnection</a>) – A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</p></li>
 <li><p><strong>api</strong> (<a class="reference external" href="https://huggingface.co/docs/huggingface_hub/v0.16.3/en/package_reference/hf_api#huggingface_hub.HfApi">huggingface_hub.HfApi</a>) – The huggingface_hub API object pointer.</p></li>
-<li><p><strong>lower</strong> (<em>int</em>) – Lower bound of the slicing of the set of datasets</p></li>
-<li><p><strong>upper</strong> (<em>int</em>) – Upper bound of the slicing of the set of datasets</p></li>
+<li><p><strong>limit_index</strong> (<em>int</em>) – limit_index bound of the slicing of the set of datasets</p></li>
 <li><p><strong>limit_date</strong> (<em>datetime</em>) – Date from which it starts to update the database (e.g., update the database values of the datasets that have been modified in the last month).</p></li>
 </ul>
 </dd>
@@ -214,54 +197,52 @@ It inserts dataset information into <code class="docutils literal notranslate"><
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.populate_discussions">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_discussions</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_discussions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_discussions" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.populate_discussions">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_discussions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_discussions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_discussions" title="Permalink to this definition"></a></dt>
 <dd><p>Importation of discussions information.
-It inserts discussion information into <code class="docutils literal notranslate"><span class="pre">discussion</span></code>, <code class="docutils literal notranslate"><span class="pre">author</span></code> and <code class="docutils literal notranslate"><span class="pre">discussion_event</span></code> tables.</p>
+It inserts discussion information into <code class="docutils literal notranslate"><span class="pre">discussion</span></code>, <code class="docutils literal notranslate"><span class="pre">author</span></code>, <code class="docutils literal notranslate"><span class="pre">conflicting_files_discussion</span></code> and <code class="docutils literal notranslate"><span class="pre">discussion_event</span></code> tables.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
 <li><p><strong>conn</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html">connection.MySQLConnection</a>) – A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</p></li>
 <li><p><strong>api</strong> (<a class="reference external" href="https://huggingface.co/docs/huggingface_hub/v0.16.3/en/package_reference/hf_api#huggingface_hub.HfApi">huggingface_hub.HfApi</a>) – The huggingface_hub API object pointer.</p></li>
-<li><p><strong>repo_name</strong> (<em>str</em>) – The name of the repository.</p></li>
-<li><p><strong>type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
+<li><p><strong>repo_name</strong> (<em>str</em>) – The full name (i.e., “owner/repo_name”) of the repository.</p></li>
+<li><p><strong>repo_type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.populate_files">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_files</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_files" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.populate_files">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_files" title="Permalink to this definition"></a></dt>
 <dd><p>Importation of file information.
-It inserts file information into <code class="docutils literal notranslate"><span class="pre">file</span></code> table.</p>
+It inserts file information into <code class="docutils literal notranslate"><span class="pre">repo_file</span></code> table.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
-<li><p><strong>files</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – A list of filenames.</p></li>
-<li><p><strong>repo_name</strong> (<em>str</em>) – The name of the repository.</p></li>
-<li><p><strong>type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
+<li><p><strong>repo_name</strong> (<em>str</em>) – The full name (i.e., “owner/repo_name”) of the repository.</p></li>
+<li><p><strong>repo_type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.populate_models">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_models</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_models"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_models" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.populate_models">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_models</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_models"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_models" title="Permalink to this definition"></a></dt>
 <dd><p>Importation of the information of models.
-It retrieves the whole set of models from HFH, and optionally, it slices the set using the lower and upper params. 
-It inserts model information into <code class="docutils literal notranslate"><span class="pre">repository</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code> and <code class="docutils literal notranslate"><span class="pre">author</span></code> tables, and calls the populate methods to fill the remaining tables (not including <code class="docutils literal notranslate"><span class="pre">populate_datasets</span></code> and <code class="docutils literal notranslate"><span class="pre">populate_spaces</span></code>).</p>
+It retrieves the whole set of models from HFH or, optionally, the first <code class="docutils literal notranslate"><span class="pre">limit_index</span></code> elements. 
+It inserts model information into <code class="docutils literal notranslate"><span class="pre">repository</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code> and <code class="docutils literal notranslate"><span class="pre">author</span></code> tables, and calls the rest of populate methods to fill the remaining tables (not including <code class="docutils literal notranslate"><span class="pre">populate_datasets</span></code> and <code class="docutils literal notranslate"><span class="pre">populate_spaces</span></code>).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
 <li><p><strong>conn</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html">connection.MySQLConnection</a>) – A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</p></li>
 <li><p><strong>api</strong> (<a class="reference external" href="https://huggingface.co/docs/huggingface_hub/v0.16.3/en/package_reference/hf_api#huggingface_hub.HfApi">huggingface_hub.HfApi</a>) – The huggingface_hub API object pointer.</p></li>
-<li><p><strong>lower</strong> (<em>int</em>) – Lower bound of the slicing of the set of models</p></li>
-<li><p><strong>upper</strong> (<em>int</em>) – Upper bound of the slicing of the set of models</p></li>
+<li><p><strong>limit_index</strong> (<em>int</em>) – limit_index bound of the slicing of the set of models</p></li>
 <li><p><strong>limit_date</strong> (<em>datetime</em>) – Date from which it starts to update the database (e.g., update the database values of the models that have been modified in the last month).</p></li>
 </ul>
 </dd>
@@ -269,19 +250,35 @@ It inserts model information into <code class="docutils literal notranslate"><sp
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.populate_spaces">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_spaces</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_spaces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_spaces" title="Permalink to this definition">¶</a></dt>
-<dd><p>Importation of the information of spaces.
-It retrieves the whole set of spaces from HFH, and optionally, it slices the set using the lower and upper params. 
-It inserts model information into <code class="docutils literal notranslate"><span class="pre">repository</span></code> and <code class="docutils literal notranslate"><span class="pre">author</span></code> tables, and calls the populate methods to fill the remaining tables (not including <code class="docutils literal notranslate"><span class="pre">populate_models</span></code> and <code class="docutils literal notranslate"><span class="pre">populate_datasets</span></code>).</p>
+<dt class="sig sig-object py" id="databaseImport.populate_space_dependencies">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_space_dependencies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datasets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_space_dependencies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_space_dependencies" title="Permalink to this definition"></a></dt>
+<dd><p>Importation of space dependency information. 
+It inserts the models and datasets used information into the <code class="docutils literal notranslate"><span class="pre">models_in_space</span></code> and <code class="docutils literal notranslate"><span class="pre">datasets_in_space</span></code> tables.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
+<li><p><strong>models</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – A list of model ids.</p></li>
+<li><p><strong>datasets</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – A list of dataset ids.</p></li>
+<li><p><strong>repo_name</strong> (<em>str</em>) – The name of the space repository.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="databaseImport.populate_spaces">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_spaces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_spaces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_spaces" title="Permalink to this definition"></a></dt>
+<dd><p>Importation of the information of spaces.
+It retrieves the whole set of models from HFH or, optionally, the first <code class="docutils literal notranslate"><span class="pre">limit_index</span></code> elements. 
+It inserts model information into <code class="docutils literal notranslate"><span class="pre">repository</span></code>, <code class="docutils literal notranslate"><span class="pre">space</span></code> and <code class="docutils literal notranslate"><span class="pre">author</span></code> tables, and calls the rest of populate methods to fill the remaining tables (not including <code class="docutils literal notranslate"><span class="pre">populate_models</span></code> and <code class="docutils literal notranslate"><span class="pre">populate_datasets</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
 <li><p><strong>conn</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html">connection.MySQLConnection</a>) – A MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</p></li>
 <li><p><strong>api</strong> (<a class="reference external" href="https://huggingface.co/docs/huggingface_hub/v0.16.3/en/package_reference/hf_api#huggingface_hub.HfApi">huggingface_hub.HfApi</a>) – The huggingface_hub API object pointer.</p></li>
-<li><p><strong>lower</strong> (<em>int</em>) – Lower bound of the slicing of the set of spaces</p></li>
-<li><p><strong>upper</strong> (<em>int</em>) – Upper bound of the slicing of the set of spaces</p></li>
+<li><p><strong>limit_index</strong> (<em>int</em>) – limit_index bound of the slicing of the set of spaces</p></li>
 <li><p><strong>limit_date</strong> (<em>datetime</em>) – Date from which it starts to update the database (e.g., update the database values of the spaces that have been modified in the last month).</p></li>
 </ul>
 </dd>
@@ -289,49 +286,49 @@ It inserts model information into <code class="docutils literal notranslate"><sp
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.populate_tags">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">populate_tags</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_tags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_tags" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.populate_tags">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">populate_tags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#populate_tags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.populate_tags" title="Permalink to this definition"></a></dt>
 <dd><p>Importation of tag information. 
 It inserts tag information into the <code class="docutils literal notranslate"><span class="pre">tag</span></code> and <code class="docutils literal notranslate"><span class="pre">tags_in_repo</span></code> tables.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>cursor</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html">cursor.MySQLCursor</a>) – The MySQL connection cursor to execute operations such as SQL statements.</p></li>
 <li><p><strong>conn</strong> (<a class="reference external" href="https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection.html">connection.MySQLConnection</a>) – The MySQL connector to the database specified in the configuration file. Used to commit changes to fulfill FK restrictions.</p></li>
 <li><p><strong>tags</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – A list of tag names.</p></li>
-<li><p><strong>repo_name</strong> (<em>str</em>) – The name of the repository.</p></li>
-<li><p><strong>type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
+<li><p><strong>repo_name</strong> (<em>str</em>) – The full name (i.e., “owner/repo_name”) of the repository.</p></li>
+<li><p><strong>repo_type</strong> (<em>str</em>) – The type of the repository (i.e., model, dataset or space)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.read_config">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">read_config</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#read_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.read_config" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.read_config">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">read_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#read_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.read_config" title="Permalink to this definition"></a></dt>
 <dd><p>Function that retrieves configuration JSON from hfc.config.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns config</dt>
+<dt class="field-odd">Returns config<span class="colon">:</span></dt>
 <dd class="field-odd"><p>JSON object containing all configuration parameters.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>JSON</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt id="databaseImport.validate_token">
-<code class="sig-prename descclassname"><span class="pre">databaseImport.</span></code><code class="sig-name descname"><span class="pre">validate_token</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#validate_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.validate_token" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="databaseImport.validate_token">
+<span class="sig-prename descclassname"><span class="pre">databaseImport.</span></span><span class="sig-name descname"><span class="pre">validate_token</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/databaseImport.html#validate_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#databaseImport.validate_token" title="Permalink to this definition"></a></dt>
 <dd><p>Auxiliar function to validate the token placed in hfc.config.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>token</strong> (<em>str</em>) – Hugging Face Hub <a class="reference external" href="https://huggingface.co/docs/hub/security-tokens">API token</a></p>
 </dd>
 </dl>
 </dd></dl>
 
-</div>
+</section>
 
 
            </div>
