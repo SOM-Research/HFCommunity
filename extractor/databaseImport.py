@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 """ Script to retrieve HFH and Git data, and to create and to populate a MariaDB database """
 import getopt
 import subprocess
@@ -35,23 +36,23 @@ def eprint(*args, **kwargs):
 
 
 def onerror(func, path, exc_info):
-    """
-    Error handler for ``shutil.rmtree``. Intended for Windows usage (e.g., `Acces Denied <https://stackoverflow.com/questions/2656322/shutil-rmtree-fails-on-windows-with-access-is-denied>`_)
+      """
+      Error handler for ``shutil.rmtree``. Intended for Windows usage (e.g., `Acces Denied <https://stackoverflow.com/questions/2656322/shutil-rmtree-fails-on-windows-with-access-is-denied>`_)
 
-    If the error is due to an access error (read only file)
-    it attempts to add write permission and then retries.
+      If the error is due to an access error (read only file)
+      it attempts to add write permission and then retries.
 
-    If the error is for another reason it re-raises the error.
-    
-    Usage : ``shutil.rmtree(path, onerror=onerror)``
-    """
-    import stat
-    # Is the error an access error?
-    if not os.access(path, os.W_OK):
-        os.chmod(path, stat.S_IWUSR)
-        func(path)
-    else:
-        raise
+      If the error is for another reason it re-raises the error.
+      
+      Usage : ``shutil.rmtree(path, onerror=onerror)``
+      """
+      import stat
+      # Is the error an access error?
+      if not os.access(path, os.W_OK):
+            os.chmod(path, stat.S_IWUSR)
+            func(path)
+      else:
+            raise
 
 
 def check_database_schema(cursor, database):
@@ -114,25 +115,25 @@ def check_negative_indices(list_len, l_index, u_index):
 
 
 def validate_token(token):
-            """
-            Auxiliar function to validate the token placed in hfc.config.
+      """
+      Auxiliar function to validate the token placed in hfc.config.
 
-            :param str token: Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_
-            """
-            url = "https://huggingface.co/api/whoami-v2"
-            bearer_token = "Bearer " + token
-            headers = {"Authorization": bearer_token}
-            response = requests.get(url, headers=headers)
-            status_code = response.status_code
+      :param str token: Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_
+      """
+      url = "https://huggingface.co/api/whoami-v2"
+      bearer_token = "Bearer " + token
+      headers = {"Authorization": bearer_token}
+      response = requests.get(url, headers=headers)
+      status_code = response.status_code
 
-            if status_code != 200:
-                  if status_code == 401:
-                        eprint("HFH token is incorrect, please place a valid HFH token in the 'hfh_token' parameter of the hfc.config file.")
-                        sys.exit(1)
-                  else:
-                        eprint("Verification of HFH token. Return HTTP status code for whoami endpoint:" + str(status_code))
-                        eprint("Please place a valid HFH token in the 'hfh_token' parameter of the hfc.config file.")
-                        sys.exit(1)
+      if status_code != 200:
+            if status_code == 401:
+                  eprint("HFH token is incorrect, please place a valid HFH token in the 'hfh_token' parameter of the hfc.config file.")
+                  sys.exit(1)
+            else:
+                  eprint("Verification of HFH token. Return HTTP status code for whoami endpoint:" + str(status_code))
+                  eprint("Please place a valid HFH token in the 'hfh_token' parameter of the hfc.config file.")
+                  sys.exit(1)
             
 
 # DB CONFIGURATION
@@ -193,9 +194,6 @@ def create_schema_mysql(cursor):
       cursor.execute('''DROP TABLE IF EXISTS repository''')
       cursor.execute('''DROP TABLE IF EXISTS author''')
       
-      
-      
-
       print("Creating tables...")
 
       cursor.execute('''
@@ -660,7 +658,7 @@ def populate_datasets(cursor, conn, api, lower, upper, limit_date):
 
             i += 1
             
-            # This repo is huge, it is needed a workaround when collecting the commits;
+            # TODO: This repo is huge, it is needed a workaround when collecting the commits;
             if dataset.__dict__.get("id") in ["ywchoi/mdpi_sept10", "ACL-OCL/acl-anthology-corpus", "uripper/ProductScreenshots", "gozfarb/ShareGPT_Vicuna_unfiltered","deepsynthbody/deepfake_ecg_full_train_validation_test"]:
                   continue
 
@@ -739,7 +737,7 @@ def populate_spaces(cursor, conn, api, lower, upper, limit_date):
             
             i += 1
 
-            # This repo always give error with PyDriller, we'll have to take a look -> in web ERROR in deploying
+            # TODO: This repo always give error with PyDriller, we'll have to take a look -> in web ERROR in deploying
             if space.__dict__.get("id") in ["mfrashad/ClothingGAN", "mfrashad/CharacterGAN", "fdfdd12345628/Tainan", "patent/demo1"]:
                   continue
             
@@ -795,7 +793,6 @@ def main(argv):
 
       validate_token(ACCESS_TOKEN)
       
-      
       # Monthly recovery. NOT BY DEFAULT.
       # Default date (Jan 1st 1970 - UNIX epoch time)
       limit_date = pytz.UTC.localize(datetime.fromtimestamp(0))
@@ -807,7 +804,6 @@ def main(argv):
                   limit_date = pytz.UTC.localize((datetime.now() - dateutil.relativedelta.relativedelta(months=last_n_months)).replace(day=1, hour=0, minute=0, second=0, microsecond=0))
       except KeyError as ke:
             print("Missing n_last_month parameter in hfc.config file. Retrieving all information!")
-
 
       lower = 0
       upper = None
@@ -849,7 +845,6 @@ def main(argv):
       query = """ALTER DATABASE {} CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci;""".format(config["database"])
       c.execute(query)
 
-      
       tables_exist = check_database_schema(c, database)
 
       if not tables_exist:
@@ -881,7 +876,6 @@ def main(argv):
       # We can also close the connection if we are done with it.
       # Just be sure any changes have been committed or they will be lost.
       conn.close()
-
       
       if skip:
             print("SKIPPED REPOS: ", SKIPPED_REPOS)
