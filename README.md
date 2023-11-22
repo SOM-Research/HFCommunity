@@ -26,6 +26,10 @@ The website of HFCommunity is located [here](https://som-research.github.io/HFCo
 
 The technical documentation of the tool is located [here](https://som-research.github.io/HFCommunity/docs/).
 
+# How to cite HFCommunity
+
+This repository has the `CITATION.cff` file, which activates the "*Cite this repository*" button in the About section (right side of the repository). The citation is in APA and BibTex format.  
+
 # Contributing
 
 This project is part of a research line of the [SOM Research Lab](https://som-research.uoc.edu/) and [BESSER project](https://github.com/besser-pearl), but we are open to contributions from the community. Any comment is more than welcome!
