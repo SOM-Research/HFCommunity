@@ -6,7 +6,7 @@
 Welcome to HFCommunity-extractor's documentation!
 =================================================
 
-This website hosts the technical documentation of the `HFCommunity <https://som-research.github.io/HFCommunity/>`_ extractor script.
+This website hosts the technical documentation of the `HFCommunity <https://som-research.github.io/HFCommunity/>`_ extractor script (``databaseImport``).
 The repository of HFCommunity can be found `here <https://github.com/SOM-Research/HFCommunity/>`_.
 
 

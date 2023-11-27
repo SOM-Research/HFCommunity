@@ -1,6 +1,13 @@
 Usage
 =====================
 
+The purpose of the HFCommunity extractor script is to prepare a relational database (following this `ER diagram <https://som-research.github.io/HFCommunity/download.html#er_diagram>`_) and to populate it with information of Hugging Face Hub repositories and its Git commit history.
+It can be used to only create the database schema, or to perform the extraction process.
+The script builds all the necessary database artifacts (the very database, the tables and the relationships).
+To set up the script, the user must edit the ``hfc.config`` file (see `Configuration`_).
+
+This script is intended to be used by high performance machines.
+To have a reference of the time and resource consuming this process is, the retrieval of the whole set of models is approximately 54 hours on a 64 GB of RAM and 8 core processor server.
 
 Requirements
 ---------------------
@@ -11,7 +18,7 @@ To execute the ``databaseImport`` script, it is necessary having installed:
 * `MariaDB <https://mariadb.com/kb/en/getting-installing-and-upgrading-mariadb/>`_ v10.3.39
 * `Git <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_ v2.20.1
 
-Furthermore, inside the extractor folder of the `GitHub repo <https://github.com/SOM-Research/HFCommunity/tree/main/extractor>`_ there is a ``requirements.txt`` to import all libraries necessary to execute the ``databaseImport`` script.
+Furthermore, inside the extractor folder of the `GitHub repo <https://github.com/SOM-Research/HFCommunity/tree/main/extractor>`_ there is a ``requirements.txt`` to import all libraries required to execute the ``databaseImport`` script.
 At the command line (with pip installed):
 
 .. code-block:: console
@@ -24,7 +31,7 @@ Configuration
 
 Before invoking the ``databaseImport`` script, it is necessary to fill (or create) the ``hfc.config`` file, in the same folder the script is located.
 Besides the mandatory fields, there are two optional parameters to configure a threshold for low resource machines.
-The retrieval of large repositories (often found in HFH dataset repositories), may consume too much resources and force the script to stop.
+The retrieval of large repositories (often found in HFH dataset repositories), may consume too many resources and force the script to stop.
 These thresholds are not exclusive, and can it be used any combination of them.
 The file follows a JSON structure, and must be defined as:
 
@@ -37,9 +44,9 @@ The file follows a JSON structure, and must be defined as:
         "pass" : "psswd",
         "database" : "db_name",
         "hfh_token" : "token",
-        "last_n_months" : 0, // optional
-        "num_commits" : 0, // optional
-        "num_files" : 0 // optional
+        "last_n_months" : -1, // optional
+        "max_num_commits" : 0, // optional
+        "max_num_files" : 0 // optional
     }
 
 The keywords in this file define:
@@ -49,12 +56,12 @@ The keywords in this file define:
 * **user**: User to acces the MariaDB database (there is a default user as ``"root"``).
 * **pass**: Password of the user.
 * **database**: The database name. The database **must** be created before invoking the script.
-* **hfh_token**: The Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_.
+* **hfh_token**: The Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_. The token must be a read access token.
 * **last_n_months**: Number of months from which it is wanted to fully update the repositories. It fully updates the repositories modified within the last ``last_n_months``. The rest of repositories only gets its downloads and likes updated. Intended for executions after the first time. 
-* **num_commits**: Constant which tells the process the threshold for not retrieving repositories with more than ``num_commits`` number of files commits. This is intended for machines with lower resources.
-* **num_files**: Constant which tells the process the threshold for not retrieving repositories with more than ``num_files`` number of files. This is intended for machines with lower resources.
+* **max_num_commits**: Constant which tells the process the threshold for not retrieving repositories with more than ``max_num_commits`` number of files commits. This is intended for machines with lower resources, only enabled when using the ``-s`` flag (see `Execution`_).
+* **max_num_files**: Constant which tells the process the threshold for not retrieving repositories with more than ``max_num_files`` number of files. This is intended for machines with lower resources, only enabled when using the ``-s`` flag (see `Execution`_).
 
-The recommended values for ``num_commits`` and ``num_files`` are 1,500 and 10,000, respectivelly.
+The recommended values for ``max_num_commits`` and ``max_num_files`` are 1,500 and 10,000, respectively.
 This must be configured according to the machine available resources.
 If the script is being used for testing purposes, these values can be lowered.
 
@@ -64,16 +71,16 @@ Execution
 
 Once installed the dependencies and libraries, the ``databaseImport`` script can be executed as follows:
 
-#. Clone this repository.
+#. Clone the `HFCommunity repository <https://github.com/SOM-Research/HFCommunity>`_.
 #. Edit the ``hfc.config`` file according to your configuration.
 #. Launch the extractor via command line (if the database schema is not created, it will be created automatically). The extract admits several parameters:
 
     .. code-block:: console
 
-        $ python databaseImport.py -t {model|dataset|space|all} [-l lower_index] [-u upper_index] [-s]
+        $ python databaseImport.py -t {model|dataset|space|all} [-i limit_index] [-s]
 
 
-#. Furthermore, the script can be used to only generate the required database schema (see `ER diagram <https://som-research.github.io/HFCommunity/download.html#er_diagram>`_). Execute the script with the following flag:
+#. Furthermore, the script can be used to only generate the required database schema (see `ER diagram`_). Execute the script with the following flag:
 
     .. code-block:: console
 
@@ -81,8 +88,7 @@ Once installed the dependencies and libraries, the ``databaseImport`` script can
 
 
 python databaseImport.py -c
-    It creates the database schema of HFC database (see `ER diagram`_). 
-    Intended to use in the first importation (the database specified in the ``hfc.config`` file must be created before).
+    It creates the database schema of HFC database (see `ER diagram`_).
     It only creates the database schema, it doesn't import the data!
 
 python databaseImport.py -t <type>
@@ -90,21 +96,19 @@ python databaseImport.py -t <type>
     This flag is mandatory, and it indicates which type of repositories will import the script. 
     If it is wanted to import all repositories (not recommended because of time and resource consumption) use the ``all`` argument.
 
-python databaseImport.py -l <l_index> -u <u_index>
-    The repositories are retrieved in a list, sorted (descending) by its last modification date (the most recent are in lower indices).
-    If it is wanted to import just a subset of these, indices will slice the list. 
-    Then, from all repositories it selects the repositories above the ``l_index`` and below ``u_index`` from the repositories retrieved of HFH. 
-    Note that it is not necessary to specify both, it can only be defined the lower index, which would mean that the upper index will default to the last element of the list, and viceversa.
-    This is intended to be used when we want to populate a reduced version of the HFC database. 
-    Furthermore, indices can also be negative and will start counting form the end.
-    **Note** that if the indices exceed the size of the list it will terminate the process to adjust the indices (it is printed the length of the list in stdout, to adjust the indices in the second execution).
-    If the indices are positive but exceed the size of the list, it will end without forcing, but it won't import anything.
+python databaseImport.py -i <limit_index>
+    The repositories are retrieved sorted (descending) by its last modification date (the most recent are in lower indices).
+    If it is wanted to import just a subset of these (i.e., 100 most recent), the indix will slice the list. 
+    Then, from all repositories it selects the repositories below the ``limit_index`` from all the repositories retrieved of HFH. 
+    This is intended to be used when we want to populate a reduced version of the HFC database.
+    Note that if the index exceed the size of the list, it will import the whole set.
 
 python databaseImport.py -s
-    The importation of dataset and model repositories may consume excessive resources in some case.
-    When this flag is activated, the script will read the ``num_commits`` and ``num_files`` parameters of the ``hfc.config`` file, and skip repositories having more than one of these threshold (each parameter represents a threshold and they are evaluated independently).
-    It is not necessary to specifiy both.
+    The importation of dataset and model repositories may consume excessive resources in some cases.
+    When this flag is activated, the script will read the ``max_num_commits`` and ``max_num_files`` parameters of the ``hfc.config`` file, and skip repositories having more than one of these threshold (each parameter represents a threshold and they are evaluated independently).
+    It is not necessary to specify both.
     The script will print to stdout the repositories skipped and the total number of skipped repositories at the end.
+    **It is highly recommended using this option**, even in high performance machines, as some repositories may have tens of thousands of commits and files, which it will consume excessive RAM memory.
 
 
 
@@ -117,7 +121,7 @@ To have a clear idea of how to execute the script, we present some examples in t
 
 .. code-block:: console
 
-    $ python databaseImport.py -t model -u 100
+    $ python databaseImport.py -t model -i 100
 
 *"I want to retrieve all repositories of HFH, but skip those above the threshold."*
 
@@ -125,8 +129,8 @@ To have a clear idea of how to execute the script, we present some examples in t
 
     $ python databaseImport.py -t all -s
 
-*"I want to retrieve the 50 least recent modified spaces, but skip those above the threshold."*
+*"I want to retrieve the 50 most recent modified spaces, but skip those above the threshold."*
 
 .. code-block:: console
 
-    $ python databaseImport.py -t space -l -50 -s
+    $ python databaseImport.py -t space -i -50 -s

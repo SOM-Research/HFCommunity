@@ -1,22 +1,24 @@
 # HFCommunity
 
-HFCommunity is a dataset built via a data collection process relying on the Hugging Face Hub (HFH) API and Git. 
+HFCommunity is a dataset built via a data collection process relying on the [Hugging Face Hub (HFH)](https://huggingface.co) API and Git. 
 
-The following figure shows the architecture of HFCommunity. As can be seen, HFCommunity is composed of two main components: 
+HFCommunity dataset is provided as a relational database, and therefore it can be queried via SQL-like languages to enable empirical analysis on ML projects.
+
+The following figure shows the architecture of HFCommunity. 
+
+![HFCommunity Architecture](imgs/architecture.png)
+
+As can be seen, HFCommunity is composed of two main components: 
 
 * **Dataset Extractor**. The Dataset Extractor includes extractors for the different HFH data elements (i.e., datasets, models, and spaces) and a database importer to store the extracted data. Note that the database importer follows the [conceptual schema for HFCommunity](https://som-research.github.io/HFCommunity/diagram.html), which includes the main entities and relationships to query HFH data (e.g., model, dataset, space, issue or discussion elements).
 
 * **Website**. The Website is a web application that includes the main technical documentation of the tool and the last HFCommunity dataset dumps to be downloaded. A new release of HFCommunity is released every month.
 
-![HFCommunity Architecture](imgs/architecture.png)
-
-HFCommunity dataset is provided as a relational database, and therefore it can be queried via SQL-like languages to enable empirical analysis on ML projects.
-
 ## Dataset Extractor
 
 The Dataset Extractor has been developed in Python and is in charge of importing the HFH data into the HFCommunity dataset. 
-To execute the Dataset Extractor refer to the [docs](https://som-research.github.io/HFCommunity/docs/usage.html).
 
+To execute the Dataset Extractor please refer to the [docs](https://som-research.github.io/HFCommunity/docs/usage.html).
 
 ## Website
 
@@ -24,15 +26,19 @@ The website of HFCommunity is located [here](https://som-research.github.io/HFCo
 
 The technical documentation of the tool is located [here](https://som-research.github.io/HFCommunity/docs/).
 
+# How to cite HFCommunity
+
+This repository has the `CITATION.cff` file, which activates the "*Cite this repository*" button in the About section (right side of the repository). The citation is in APA and BibTex format.  
+
 # Contributing
 
-This project is part of a research line of the [SOM Research Lab](https://som-research.uoc.edu/) and [BESSER project](https://github.com/besser-pearl), but we are open to contributions from the community. Any comment is welcome!
+This project is part of a research line of the [SOM Research Lab](https://som-research.uoc.edu/) and [BESSER project](https://github.com/besser-pearl), but we are open to contributions from the community. Any comment is more than welcome!
 
 If you are interested in contributing to this project, please read the [CONTRIBUTING.md](CONTRIBUTING.md) file.
 
 # Code of Conduct
 
-At SOM Research Lab we are dedicated to creating and maintaining welcoming, inclusive, safe, and harassment-free development spaces. Anyone participating will be subject to and agrees to sign on to our [Code of Conduct](CODE_OF_CONDUCT.md).
+At SOM Research Lab and BESSER we are dedicated to creating and maintaining welcoming, inclusive, safe, and harassment-free development spaces. Anyone participating will be subject to and agrees to sign on to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 # Governance
 
