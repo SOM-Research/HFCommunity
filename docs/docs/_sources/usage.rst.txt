@@ -58,10 +58,10 @@ The keywords in this file define:
 * **database**: The database name. The database **must** be created before invoking the script.
 * **hfh_token**: The Hugging Face Hub `API token <https://huggingface.co/docs/hub/security-tokens>`_. The token must be a read access token.
 * **last_n_months**: Number of months from which it is wanted to fully update the repositories. It fully updates the repositories modified within the last ``last_n_months``. The rest of repositories only gets its downloads and likes updated. Intended for executions after the first time. 
-* **max_num_commits**: Constant which tells the process the threshold for not retrieving repositories with more than ``num_commits`` number of files commits. This is intended for machines with lower resources, only enabled when using the ``-s`` flag (see `Execution`_).
-* **max_num_files**: Constant which tells the process the threshold for not retrieving repositories with more than ``num_files`` number of files. This is intended for machines with lower resources, only enabled when using the ``-s`` flag (see `Execution`_).
+* **max_num_commits**: Constant which tells the process the threshold for not retrieving repositories with more than ``max_num_commits`` number of files commits. This is intended for machines with lower resources, only enabled when using the ``-s`` flag (see `Execution`_).
+* **max_num_files**: Constant which tells the process the threshold for not retrieving repositories with more than ``max_num_files`` number of files. This is intended for machines with lower resources, only enabled when using the ``-s`` flag (see `Execution`_).
 
-The recommended values for ``num_commits`` and ``num_files`` are 500 and 1,500, respectively.
+The recommended values for ``max_num_commits`` and ``max_num_files`` are 1,500 and 10,000, respectively.
 This must be configured according to the machine available resources.
 If the script is being used for testing purposes, these values can be lowered.
 
@@ -105,7 +105,7 @@ python databaseImport.py -i <limit_index>
 
 python databaseImport.py -s
     The importation of dataset and model repositories may consume excessive resources in some cases.
-    When this flag is activated, the script will read the ``num_commits`` and ``num_files`` parameters of the ``hfc.config`` file, and skip repositories having more than one of these threshold (each parameter represents a threshold and they are evaluated independently).
+    When this flag is activated, the script will read the ``max_num_commits`` and ``max_num_files`` parameters of the ``hfc.config`` file, and skip repositories having more than one of these threshold (each parameter represents a threshold and they are evaluated independently).
     It is not necessary to specify both.
     The script will print to stdout the repositories skipped and the total number of skipped repositories at the end.
     **It is highly recommended using this option**, even in high performance machines, as some repositories may have tens of thousands of commits and files, which it will consume excessive RAM memory.
