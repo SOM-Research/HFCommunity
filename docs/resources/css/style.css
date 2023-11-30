@@ -45,29 +45,57 @@
   border: none;
 }
 
-.btn-download {
+.btn-download-new-version {
   background-color: #406DB4;
   color: white;
   border: none;
   box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
 }
 
-.btn-download:active {
+.btn-download-new-version:active {
   background-color: #406DB4;
   color: white;
   border: none;
   box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
 }
 
-.btn-download:hover {
+.btn-download-new-version:hover {
   background-color: #648AC7;
   color: white;
   border: none;
   box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
 }
 
-.btn-download:focus {
+.btn-download-new-version:focus {
   background-color: #406DB4;
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
+}
+
+.btn-download-old-version {
+  background-color: #FAAC23;
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
+}
+
+.btn-download-old-version:active {
+  background-color: #FAAC23;
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
+}
+
+.btn-download-old-version:hover {
+  background-color: #FFC299;
+  color: white;
+  border: none;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
+}
+
+.btn-download-old-version:focus {
+  background-color: #FAAC23;
   color: white;
   border: none;
   box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 4px 10px 0 rgba(0,0,0,0.19);
@@ -195,4 +223,16 @@ figcaption {
   to {
     transform: rotate(-360deg);
   }
+}
+
+.footer-box-new {
+  color: #406DB4;
+}
+
+.footer-box-old {
+  color: #FAAC23;
+}
+
+tfoot {
+  background-color: aliceblue;
 }
